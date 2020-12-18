@@ -1,12 +1,29 @@
-use serde::{Serialize};
+use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 pub enum CategoryType {
     Expense,
     Income
 }
 
-#[derive(Serialize, Debug)]
+impl CategoryType {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            CategoryType::Expense => "Expense",
+            CategoryType::Income => "Income"
+        }
+    }
+
+    pub fn from_str(s: &str) -> Option<CategoryType> {
+        match s {
+            "Expense" => Some(CategoryType::Expense),
+            "Income" => Some(CategoryType::Income),
+            _ => None
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug)]
 pub struct Category {
     pub category_type: CategoryType,
     pub name: String

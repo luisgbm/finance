@@ -4,14 +4,22 @@ extern crate rocket;
 
 use crate::category::{Category, CategoryType};
 use crate::transaction::Transaction;
+use crate::finance_db::FinanceDB;
 use crate::account::Account;
 
 use chrono::prelude::*;
 use serde_json::json;
+use rocket_contrib::json::Json;
 
 mod category;
 mod transaction;
 mod account;
+mod finance_db;
+
+#[post("/category", format = "json", data = "<category>")]
+fn post_category(category: Json<Category>) -> String {
+    FinanceDB::new().new_category(&category.into_inner())
+}
 
 #[get("/")]
 fn index() -> String {
@@ -39,5 +47,5 @@ fn index() -> String {
 }
 
 fn main() {
-    rocket::ignite().mount("/", routes![index]).launch();
+    rocket::ignite().mount("/", routes![index, post_category]).launch();
 }

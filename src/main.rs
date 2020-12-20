@@ -21,6 +21,11 @@ fn post_category(category: Json<Category>) -> String {
     FinanceDB::new().new_category(&category.into_inner())
 }
 
+#[get("/category")]
+fn get_categories() -> Json<Vec<Category>> {
+    Json(FinanceDB::new().get_all_categories())
+}
+
 #[get("/")]
 fn index() -> String {
     let market = Category::new(CategoryType::Expense, "Market");
@@ -47,5 +52,5 @@ fn index() -> String {
 }
 
 fn main() {
-    rocket::ignite().mount("/", routes![index, post_category]).launch();
+    rocket::ignite().mount("/", routes![index, post_category, get_categories]).launch();
 }

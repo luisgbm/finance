@@ -26,14 +26,24 @@ impl CategoryType {
 #[derive(Deserialize, Serialize, Debug)]
 pub struct Category {
     pub category_type: CategoryType,
-    pub name: String
+    pub name: String,
+    pub id: String
 }
 
 impl Category {
     pub fn new(category_type: CategoryType, name: &str) -> Category {
         Category {
             category_type,
-            name: name.to_string()
+            name: name.to_string(),
+            id: String::new()
+        }
+    }
+
+    pub fn new_with_id(category_type: CategoryType, name: &str, id: &str) -> Category {
+        Category {
+            category_type,
+            name: name.to_string(),
+            id: id.to_string()
         }
     }
 }

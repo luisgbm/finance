@@ -1,56 +1,53 @@
 #![feature(proc_macro_hygiene, decl_macro)]
+
+#[macro_use]
+extern crate diesel;
+
 #[macro_use]
 extern crate rocket;
 
-use crate::category::{Category, CategoryType};
-use crate::transaction::Transaction;
-use crate::finance_db::FinanceDB;
-use crate::account::Account;
+extern crate dotenv;
 
-use chrono::prelude::*;
-use serde_json::json;
 use rocket_contrib::json::Json;
 
-mod category;
-mod transaction;
-mod account;
-mod finance_db;
+pub mod models;
+pub mod schema;
+pub mod finance_db;
 
-#[post("/category", format = "json", data = "<category>")]
-fn post_category(category: Json<Category>) -> String {
-    FinanceDB::new().new_category(&category.into_inner())
+use crate::finance_db::FinanceDB;
+use crate::models::{CategoryType, NewCategoryType};
+
+#[post("/categorytypes", format = "json", data = "<category_type>")]
+fn post_category_type(category_type: Json<NewCategoryType>) -> Json<CategoryType> {
+    Json(FinanceDB::new().new_category_type(&category_type.into_inner()))
 }
 
-#[get("/category")]
-fn get_categories() -> Json<Vec<Category>> {
-    Json(FinanceDB::new().get_all_categories())
+#[get("/categorytypes")]
+fn get_category_types() -> Json<Vec<CategoryType>> {
+    Json(FinanceDB::new().get_all_category_types())
 }
 
-#[get("/")]
-fn index() -> String {
-    let market = Category::new(CategoryType::Expense, "Market");
-    let salary = Category::new(CategoryType::Income, "Salary");
+#[get("/categorytypes/<id>")]
+fn get_category_type_with_id(id: i32) -> Json<CategoryType> {
+    Json(FinanceDB::new().get_category_type(id))
+}
 
-    let t1 = Transaction::new(
-        &market,
-        10,
-        Utc.ymd(2020, 12, 16).and_hms(10, 15, 00)
-    );
+#[patch("/categorytypes/<id>", format = "json", data = "<category_type>")]
+fn patch_category_type(id: i32, category_type: Json<NewCategoryType>) -> Json<CategoryType> {
+    Json(FinanceDB::new().update_category_type(id, &category_type.into_inner()))
+}
 
-    let t2 = Transaction::new(
-        &salary,
-        30,
-        Utc.ymd(2020, 12, 16).and_hms(10, 16, 00)
-    );
-
-    let mut bradesco = Account::new("Bradesco");
-
-    bradesco.add_transaction(&t1);
-    bradesco.add_transaction(&t2);
-
-    json!(&bradesco).to_string()
+#[delete("/categorytypes/<id>")]
+fn delete_category_type(id: i32) -> Json<CategoryType> {
+    Json(FinanceDB::new().delete_category_type(id))
 }
 
 fn main() {
-    rocket::ignite().mount("/", routes![index, post_category, get_categories]).launch();
+    rocket::ignite().mount("/", routes![
+        post_category_type,
+        get_category_types,
+        get_category_type_with_id,
+        patch_category_type,
+        delete_category_type
+    ]).launch();
 }

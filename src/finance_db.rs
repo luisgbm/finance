@@ -1,63 +1,69 @@
-use mongodb::sync::{Client, Database};
-use mongodb::bson::{doc, Bson};
+use diesel::prelude::*;
+use diesel::pg::PgConnection;
+use dotenv::dotenv;
+use std::env;
 
-use crate::category::{Category, CategoryType};
+use crate::models::{CategoryType, NewCategoryType};
 
 pub struct FinanceDB {
-    database: Database
+    connection: PgConnection
 }
 
 impl FinanceDB {
     pub fn new() -> FinanceDB {
-        let client = Client::with_uri_str("mongodb://localhost:27017").unwrap();
+        dotenv().ok();
+
+        let database_url = env::var("DATABASE_URL")
+            .expect("DATABASE_URL must be set");
+
+        let connection = PgConnection::establish(&database_url)
+            .expect(&format!("Error connecting to {}", database_url));
 
         FinanceDB {
-            database: client.database("financedb")
+            connection
         }
     }
 
-    pub fn new_category(&self, category: &Category) -> String {
-        let category_doc = doc! {
-            "category_type": category.category_type.as_str(),
-            "name": &category.name
-        };
+    pub fn new_category_type(&self, new_category_type: &NewCategoryType) -> CategoryType {
+        use crate::schema::categorytypes;
 
-        let object_id = self.database.collection("categories").insert_one(category_doc, None).unwrap().inserted_id;
-
-        object_id.as_object_id().unwrap().to_hex()
+        diesel::insert_into(categorytypes::table)
+            .values(new_category_type)
+            .get_result(&self.connection)
+            .expect("Error saving new category type")
     }
 
-    pub fn get_all_categories(&self) -> Vec<Category> {
-        let cursor = self.database.collection("categories").find(None, None).unwrap();
+    pub fn get_all_category_types(&self) -> Vec<CategoryType> {
+        use crate::schema::categorytypes::dsl::*;
 
-        let mut categories = Vec::new();
+        categorytypes
+            .load::<CategoryType>(&self.connection)
+            .expect("Error loading category types")
+    }
 
-        for result in cursor {
-            if let Ok(item) = result {
-                println!("{:?}", item);
-                let mut name = String::new();
-                let mut category_type_opt = None;
-                let mut object_id = String::new();
+    pub fn get_category_type(&self, find_id: i32) -> CategoryType {
+        use crate::schema::categorytypes::dsl::*;
 
-                if let Some(&Bson::String(ref n)) = item.get("name") {
-                    name = n.to_string();
-                }
+        categorytypes
+            .find(find_id)
+            .first::<CategoryType>(&self.connection)
+            .expect("Error loading category type")
+    }
 
-                if let Some(&Bson::String(ref c)) = item.get("category_type") {
-                    category_type_opt = CategoryType::from_str(c);
-                }
+    pub fn update_category_type(&self, update_id: i32, update_category_type: &NewCategoryType) -> CategoryType {
+        use crate::schema::categorytypes::dsl::*;
 
-                if let Some(&Bson::ObjectId(ref id)) = item.get("_id") {
-                    object_id = id.to_hex();
-                }
+        diesel::update(categorytypes.find(update_id))
+            .set(name.eq(update_category_type.name))
+            .get_result::<CategoryType>(&self.connection)
+            .expect(&format!("Unable to find category type with id {}", update_id))
+    }
 
-                if let Some(category_type) = category_type_opt {
-                    categories.push(Category::new_with_id(category_type, name.as_str(), object_id.as_str()));
-                }
+    pub fn delete_category_type(&self, delete_id: i32) -> CategoryType {
+        use crate::schema::categorytypes::dsl::*;
 
-            }
-        }
-
-        categories
+        diesel::delete(categorytypes.find(delete_id))
+            .get_result::<CategoryType>(&self.connection)
+            .expect(&format!("Unable to find category type with id {}", delete_id))
     }
 }

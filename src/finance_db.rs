@@ -2,6 +2,7 @@ use diesel::prelude::*;
 use diesel::pg::PgConnection;
 use dotenv::dotenv;
 use std::env;
+use diesel::result::Error;
 
 use crate::models::{CategoryType, NewCategoryType};
 
@@ -41,29 +42,26 @@ impl FinanceDB {
             .expect("Error loading category types")
     }
 
-    pub fn get_category_type(&self, find_id: i32) -> CategoryType {
+    pub fn get_category_type(&self, find_id: i32) -> Result<CategoryType, Error> {
         use crate::schema::categorytypes::dsl::*;
 
         categorytypes
             .find(find_id)
             .first::<CategoryType>(&self.connection)
-            .expect("Error loading category type")
     }
 
-    pub fn update_category_type(&self, update_id: i32, update_category_type: &NewCategoryType) -> CategoryType {
+    pub fn update_category_type(&self, update_id: i32, update_category_type: &NewCategoryType) -> Result<CategoryType, Error> {
         use crate::schema::categorytypes::dsl::*;
 
         diesel::update(categorytypes.find(update_id))
             .set(name.eq(update_category_type.name))
             .get_result::<CategoryType>(&self.connection)
-            .expect(&format!("Unable to find category type with id {}", update_id))
     }
 
-    pub fn delete_category_type(&self, delete_id: i32) -> CategoryType {
+    pub fn delete_category_type(&self, delete_id: i32) -> Result<CategoryType, Error> {
         use crate::schema::categorytypes::dsl::*;
 
         diesel::delete(categorytypes.find(delete_id))
             .get_result::<CategoryType>(&self.connection)
-            .expect(&format!("Unable to find category type with id {}", delete_id))
     }
 }

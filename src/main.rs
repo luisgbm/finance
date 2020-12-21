@@ -9,6 +9,7 @@ extern crate rocket;
 extern crate dotenv;
 
 use rocket_contrib::json::Json;
+use rocket::http::Status;
 
 pub mod models;
 pub mod schema;
@@ -28,18 +29,27 @@ fn get_category_types() -> Json<Vec<CategoryType>> {
 }
 
 #[get("/categorytypes/<id>")]
-fn get_category_type_with_id(id: i32) -> Json<CategoryType> {
-    Json(FinanceDB::new().get_category_type(id))
+fn get_category_type_with_id(id: i32) -> Result<Json<CategoryType>, Status> {
+    match FinanceDB::new().get_category_type(id) {
+        Ok(category_type) => Ok(Json(category_type)),
+        Err(_) => Err(Status::NotFound)
+    }
 }
 
 #[patch("/categorytypes/<id>", format = "json", data = "<category_type>")]
-fn patch_category_type(id: i32, category_type: Json<NewCategoryType>) -> Json<CategoryType> {
-    Json(FinanceDB::new().update_category_type(id, &category_type.into_inner()))
+fn patch_category_type(id: i32, category_type: Json<NewCategoryType>) -> Result<Json<CategoryType>, Status> {
+    match FinanceDB::new().update_category_type(id, &category_type.into_inner()) {
+        Ok(category_type) => Ok(Json(category_type)),
+        Err(_) => Err(Status::NotFound)
+    }
 }
 
 #[delete("/categorytypes/<id>")]
-fn delete_category_type(id: i32) -> Json<CategoryType> {
-    Json(FinanceDB::new().delete_category_type(id))
+fn delete_category_type(id: i32) -> Result<Json<CategoryType>, Status> {
+    match FinanceDB::new().delete_category_type(id) {
+        Ok(category_type) => Ok(Json(category_type)),
+        Err(_) => Err(Status::NotFound)
+    }
 }
 
 fn main() {

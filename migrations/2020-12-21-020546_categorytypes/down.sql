@@ -1,1 +1,1 @@
-DROP TABLE categorytypes
+DROP TABLE categorytypes;

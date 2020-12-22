@@ -75,12 +75,27 @@ impl FinanceDB {
             .first::<CategoryType>(&self.connection)
     }
 
+    pub fn update_category(&self, update_id: i32, update_category: &NewCategory) -> Result<Category, Error> {
+        use crate::schema::categories::dsl::*;
+
+        diesel::update(categories.find(update_id))
+            .set(name.eq(update_category.name))
+            .get_result::<Category>(&self.connection)
+    }
+
     pub fn update_category_type(&self, update_id: i32, update_category_type: &NewCategoryType) -> Result<CategoryType, Error> {
         use crate::schema::categorytypes::dsl::*;
 
         diesel::update(categorytypes.find(update_id))
             .set(name.eq(update_category_type.name))
             .get_result::<CategoryType>(&self.connection)
+    }
+
+    pub fn delete_category(&self, delete_id: i32) -> Result<Category, Error> {
+        use crate::schema::categories::dsl::*;
+
+        diesel::delete(categories.find(delete_id))
+            .get_result::<Category>(&self.connection)
     }
 
     pub fn delete_category_type(&self, delete_id: i32) -> Result<CategoryType, Error> {

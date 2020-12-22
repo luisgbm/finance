@@ -54,10 +54,26 @@ fn get_category_type_with_id(id: i32) -> Result<Json<CategoryType>, Status> {
     }
 }
 
+#[patch("/categories/<id>", format = "json", data = "<category>")]
+fn patch_category(id: i32, category: Json<NewCategory>) -> Result<Json<Category>, Status> {
+    match FinanceDB::new().update_category(id, &category.into_inner()) {
+        Ok(category) => Ok(Json(category)),
+        Err(_) => Err(Status::NotFound)
+    }
+}
+
 #[patch("/categorytypes/<id>", format = "json", data = "<category_type>")]
 fn patch_category_type(id: i32, category_type: Json<NewCategoryType>) -> Result<Json<CategoryType>, Status> {
     match FinanceDB::new().update_category_type(id, &category_type.into_inner()) {
         Ok(category_type) => Ok(Json(category_type)),
+        Err(_) => Err(Status::NotFound)
+    }
+}
+
+#[delete("/categories/<id>")]
+fn delete_category(id: i32) -> Result<Json<Category>, Status> {
+    match FinanceDB::new().delete_category(id) {
+        Ok(category) => Ok(Json(category)),
         Err(_) => Err(Status::NotFound)
     }
 }
@@ -79,6 +95,8 @@ fn main() {
         delete_category_type,
         post_category,
         get_categories,
-        get_category_with_id
+        get_category_with_id,
+        patch_category,
+        delete_category
     ]).launch();
 }

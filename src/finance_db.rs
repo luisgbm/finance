@@ -4,7 +4,7 @@ use dotenv::dotenv;
 use std::env;
 use diesel::result::Error;
 
-use crate::models::{CategoryType, NewCategoryType, NewCategory, Category};
+use crate::models::{CategoryType, NewCategoryType, NewCategory, Category, Account, NewAccount};
 
 pub struct FinanceDB {
     connection: PgConnection
@@ -25,6 +25,15 @@ impl FinanceDB {
         }
     }
 
+    pub fn new_account(&self, new_account: &NewAccount) -> Account {
+        use crate::schema::accounts;
+
+        diesel::insert_into(accounts::table)
+            .values(new_account)
+            .get_result(&self.connection)
+            .expect("Error saving new account")
+    }
+
     pub fn new_category(&self, new_category: &NewCategory) -> Category {
         use crate::schema::categories;
 
@@ -43,6 +52,14 @@ impl FinanceDB {
             .expect("Error saving new category type")
     }
 
+    pub fn get_all_accounts(&self) -> Vec<Account> {
+        use crate::schema::accounts::dsl::*;
+
+        accounts
+            .load::<Account>(&self.connection)
+            .expect("Error loading accounts")
+    }
+
     pub fn get_all_categories(&self) -> Vec<Category> {
         use crate::schema::categories::dsl::*;
 
@@ -57,6 +74,14 @@ impl FinanceDB {
         categorytypes
             .load::<CategoryType>(&self.connection)
             .expect("Error loading category types")
+    }
+
+    pub fn get_account(&self, find_id: i32) -> Result<Account, Error> {
+        use crate::schema::accounts::dsl::*;
+
+        accounts
+            .find(find_id)
+            .first::<Account>(&self.connection)
     }
 
     pub fn get_category(&self, find_id: i32) -> Result<Category, Error> {
@@ -75,11 +100,19 @@ impl FinanceDB {
             .first::<CategoryType>(&self.connection)
     }
 
+    pub fn update_account(&self, update_id: i32, update_account: &NewAccount) -> Result<Account, Error> {
+        use crate::schema::accounts::dsl::*;
+
+        diesel::update(accounts.find(update_id))
+            .set(name.eq(update_account.name))
+            .get_result::<Account>(&self.connection)
+    }
+
     pub fn update_category(&self, update_id: i32, update_category: &NewCategory) -> Result<Category, Error> {
         use crate::schema::categories::dsl::*;
 
         diesel::update(categories.find(update_id))
-            .set(name.eq(update_category.name))
+            .set((name.eq(update_category.name), categorytype.eq(update_category.categorytype)))
             .get_result::<Category>(&self.connection)
     }
 
@@ -89,6 +122,13 @@ impl FinanceDB {
         diesel::update(categorytypes.find(update_id))
             .set(name.eq(update_category_type.name))
             .get_result::<CategoryType>(&self.connection)
+    }
+
+    pub fn delete_account(&self, delete_id: i32) -> Result<Account, Error> {
+        use crate::schema::accounts::dsl::*;
+
+        diesel::delete(accounts.find(delete_id))
+            .get_result::<Account>(&self.connection)
     }
 
     pub fn delete_category(&self, delete_id: i32) -> Result<Category, Error> {

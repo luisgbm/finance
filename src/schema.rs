@@ -1,4 +1,11 @@
 table! {
+    accounts (id) {
+        id -> Int4,
+        name -> Text,
+    }
+}
+
+table! {
     categories (id) {
         id -> Int4,
         categorytype -> Int4,
@@ -16,6 +23,7 @@ table! {
 joinable!(categories -> categorytypes (categorytype));
 
 allow_tables_to_appear_in_same_query!(
+    accounts,
     categories,
     categorytypes,
 );

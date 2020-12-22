@@ -26,4 +26,4 @@ features = ["json"]
 
 [dependencies.diesel]
 version = "1.4.5"
-features = ["postgres"]
+features = ["postgres", "chrono"]

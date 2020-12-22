@@ -16,7 +16,12 @@ pub mod schema;
 pub mod finance_db;
 
 use crate::finance_db::FinanceDB;
-use crate::models::{CategoryType, NewCategoryType, NewCategory, Category, Account, NewAccount};
+use crate::models::{CategoryType, NewCategoryType, NewCategory, Category, Account, NewAccount, Transaction, NewTransaction};
+
+#[post("/transactions/account/<account_id>", format = "json", data = "<transaction>")]
+fn post_transaction(account_id: i32, transaction: Json<NewTransaction>) -> Json<Transaction> {
+    Json(FinanceDB::new().new_transaction(&transaction.into_inner()))
+}
 
 #[post("/accounts", format = "json", data = "<account>")]
 fn post_account(account: Json<NewAccount>) -> Json<Account> {

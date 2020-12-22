@@ -4,7 +4,7 @@ use dotenv::dotenv;
 use std::env;
 use diesel::result::Error;
 
-use crate::models::{CategoryType, NewCategoryType, NewCategory, Category, Account, NewAccount};
+use crate::models::{CategoryType, NewCategoryType, NewCategory, Category, Account, NewAccount, NewTransaction, Transaction};
 
 pub struct FinanceDB {
     connection: PgConnection
@@ -23,6 +23,15 @@ impl FinanceDB {
         FinanceDB {
             connection
         }
+    }
+
+    pub fn new_transaction(&self, new_transaction: &NewTransaction) -> Transaction {
+        use crate::schema::transactions;
+
+        diesel::insert_into(transactions::table)
+            .values(new_transaction)
+            .get_result(&self.connection)
+            .expect("Error saving new transaction")
     }
 
     pub fn new_account(&self, new_account: &NewAccount) -> Account {

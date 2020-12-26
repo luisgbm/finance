@@ -64,3 +64,11 @@ pub struct NewTransaction<'a> {
     pub account: i32,
     pub category: i32
 }
+
+#[derive(Serialize, Deserialize)]
+pub struct TransactionNoAccount {
+    pub value: i32,
+    pub description: String,
+    pub date: NaiveDateTime,
+    pub category: i32
+}

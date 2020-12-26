@@ -61,6 +61,15 @@ impl FinanceDB {
             .expect("Error saving new category type")
     }
 
+    pub fn get_all_transactions_of_account(&self, account_id: i32) -> Vec<Transaction> {
+        use crate::schema::transactions::dsl::*;
+
+        transactions
+            .filter(account.eq(account_id))
+            .load::<Transaction>(&self.connection)
+            .expect(format!("Error loading transactions for account {}", account_id).as_str())
+    }
+
     pub fn get_all_accounts(&self) -> Vec<Account> {
         use crate::schema::accounts::dsl::*;
 
@@ -83,6 +92,14 @@ impl FinanceDB {
         categorytypes
             .load::<CategoryType>(&self.connection)
             .expect("Error loading category types")
+    }
+
+    pub fn get_transaction(&self, find_id: i32) -> Result<Transaction, Error> {
+        use crate::schema::transactions::dsl::*;
+
+        transactions
+            .find(find_id)
+            .first::<Transaction>(&self.connection)
     }
 
     pub fn get_account(&self, find_id: i32) -> Result<Account, Error> {
@@ -109,6 +126,19 @@ impl FinanceDB {
             .first::<CategoryType>(&self.connection)
     }
 
+    pub fn update_transaction(&self, update_id: i32, update_transaction: &NewTransaction) -> Result<Transaction, Error> {
+        use crate::schema::transactions::dsl::*;
+
+        diesel::update(transactions.find(update_id))
+            .set((
+                 value.eq(update_transaction.value),
+           description.eq(update_transaction.description),
+                  date.eq(update_transaction.date),
+               account.eq(update_transaction.account),
+              category.eq(update_transaction.category)))
+            .get_result::<Transaction>(&self.connection)
+    }
+
     pub fn update_account(&self, update_id: i32, update_account: &NewAccount) -> Result<Account, Error> {
         use crate::schema::accounts::dsl::*;
 
@@ -131,6 +161,13 @@ impl FinanceDB {
         diesel::update(categorytypes.find(update_id))
             .set(name.eq(update_category_type.name))
             .get_result::<CategoryType>(&self.connection)
+    }
+
+    pub fn delete_transaction(&self, delete_id: i32) -> Result<Transaction, Error> {
+        use crate::schema::transactions::dsl::*;
+
+        diesel::delete(transactions.find(delete_id))
+            .get_result::<Transaction>(&self.connection)
     }
 
     pub fn delete_account(&self, delete_id: i32) -> Result<Account, Error> {

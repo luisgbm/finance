@@ -16,11 +16,19 @@ pub mod schema;
 pub mod finance_db;
 
 use crate::finance_db::FinanceDB;
-use crate::models::{CategoryType, NewCategoryType, NewCategory, Category, Account, NewAccount, Transaction, NewTransaction};
+use crate::models::{CategoryType, NewCategoryType, NewCategory, Category, Account, NewAccount, Transaction, NewTransaction, TransactionNoAccount};
 
 #[post("/transactions/account/<account_id>", format = "json", data = "<transaction>")]
-fn post_transaction(account_id: i32, transaction: Json<NewTransaction>) -> Json<Transaction> {
-    Json(FinanceDB::new().new_transaction(&transaction.into_inner()))
+fn post_transaction(account_id: i32, transaction: Json<TransactionNoAccount>) -> Json<Transaction> {
+    let t = NewTransaction {
+        value: transaction.value,
+        description: transaction.description.as_str(),
+        date: transaction.date,
+        account: account_id,
+        category: transaction.category
+    };
+
+    Json(FinanceDB::new().new_transaction(&t))
 }
 
 #[post("/accounts", format = "json", data = "<account>")]
@@ -38,6 +46,11 @@ fn post_category_type(category_type: Json<NewCategoryType>) -> Json<CategoryType
     Json(FinanceDB::new().new_category_type(&category_type.into_inner()))
 }
 
+#[get("/transactions/account/<account_id>")]
+fn get_transactions(account_id: i32) -> Json<Vec<Transaction>> {
+    Json(FinanceDB::new().get_all_transactions_of_account(account_id))
+}
+
 #[get("/accounts")]
 fn get_accounts() -> Json<Vec<Account>> {
     Json(FinanceDB::new().get_all_accounts())
@@ -51,6 +64,14 @@ fn get_categories() -> Json<Vec<Category>> {
 #[get("/categorytypes")]
 fn get_category_types() -> Json<Vec<CategoryType>> {
     Json(FinanceDB::new().get_all_category_types())
+}
+
+#[get("/transactions/<id>")]
+fn get_transaction_with_id(id: i32) -> Result<Json<Transaction>, Status> {
+    match FinanceDB::new().get_transaction(id) {
+        Ok(transaction) => Ok(Json(transaction)),
+        Err(_) => Err(Status::NotFound)
+    }
 }
 
 #[get("/accounts/<id>")]
@@ -77,6 +98,14 @@ fn get_category_type_with_id(id: i32) -> Result<Json<CategoryType>, Status> {
     }
 }
 
+#[patch("/transactions/<id>", format = "json", data = "<transaction>")]
+fn patch_transaction(id: i32, transaction: Json<NewTransaction>) -> Result<Json<Transaction>, Status> {
+    match FinanceDB::new().update_transaction(id, &transaction.into_inner()) {
+        Ok(transaction) => Ok(Json(transaction)),
+        Err(_) => Err(Status::NotFound)
+    }
+}
+
 #[patch("/accounts/<id>", format = "json", data = "<account>")]
 fn patch_account(id: i32, account: Json<NewAccount>) -> Result<Json<Account>, Status> {
     match FinanceDB::new().update_account(id, &account.into_inner()) {
@@ -97,6 +126,14 @@ fn patch_category(id: i32, category: Json<NewCategory>) -> Result<Json<Category>
 fn patch_category_type(id: i32, category_type: Json<NewCategoryType>) -> Result<Json<CategoryType>, Status> {
     match FinanceDB::new().update_category_type(id, &category_type.into_inner()) {
         Ok(category_type) => Ok(Json(category_type)),
+        Err(_) => Err(Status::NotFound)
+    }
+}
+
+#[delete("/transactions/<id>")]
+fn delete_transaction(id: i32) -> Result<Json<Transaction>, Status> {
+    match FinanceDB::new().delete_transaction(id) {
+        Ok(transaction) => Ok(Json(transaction)),
         Err(_) => Err(Status::NotFound)
     }
 }
@@ -141,6 +178,11 @@ fn main() {
         get_accounts,
         get_account_with_id,
         patch_account,
-        delete_account
+        delete_account,
+        post_transaction,
+        get_transactions,
+        get_transaction_with_id,
+        patch_transaction,
+        delete_transaction
     ]).launch();
 }

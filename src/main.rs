@@ -166,8 +166,8 @@ fn delete_category_type(id: i32) -> Result<Json<CategoryType>, Status> {
 fn main() {
     let cors = rocket_cors::CorsOptions {
         allowed_origins: AllowedOrigins::All,
-        allowed_methods: vec![Method::Get, Method::Post, Method::Patch, Method::Delete].into_iter().map(From::from).collect(),
-        allowed_headers: AllowedHeaders::some(&["Authorization", "Accept"]),
+        allowed_methods: vec![Method::Get, Method::Post, Method::Patch, Method::Delete, Method::Options].into_iter().map(From::from).collect(),
+        allowed_headers: AllowedHeaders::All,
         allow_credentials: true,
         ..Default::default()
     }

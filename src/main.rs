@@ -9,7 +9,7 @@ extern crate rocket;
 extern crate dotenv;
 
 use rocket_contrib::json::Json;
-use rocket::http::{Status, Method};
+use rocket::http::{Status};
 
 pub mod models;
 pub mod schema;
@@ -17,7 +17,6 @@ pub mod finance_db;
 
 use crate::finance_db::FinanceDB;
 use crate::models::{CategoryType, NewCategoryType, NewCategory, Category, Account, NewAccount, Transaction, NewTransaction, TransactionNoAccount};
-use rocket_cors::{AllowedOrigins, AllowedHeaders};
 
 #[post("/transactions/account/<account_id>", format = "json", data = "<transaction>")]
 fn post_transaction(account_id: i32, transaction: Json<TransactionNoAccount>) -> Json<Transaction> {
@@ -164,14 +163,7 @@ fn delete_category_type(id: i32) -> Result<Json<CategoryType>, Status> {
 }
 
 fn main() {
-    let cors = rocket_cors::CorsOptions {
-        allowed_origins: AllowedOrigins::All,
-        allowed_methods: vec![Method::Get, Method::Post, Method::Patch, Method::Delete].into_iter().map(From::from).collect(),
-        allowed_headers: AllowedHeaders::All,
-        send_wildcard: true,
-        ..Default::default()
-    }
-    .to_cors().unwrap();
+    let cors = rocket_cors::CorsOptions::default().to_cors().unwrap();
 
     rocket::ignite().mount("/", routes![
         post_category_type,

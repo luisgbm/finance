@@ -1,34 +1,28 @@
 use serde::{Serialize, Deserialize};
 use chrono::NaiveDateTime;
+use diesel_derive_enum::DbEnum;
 
-use crate::schema::categorytypes;
 use crate::schema::categories;
 use crate::schema::accounts;
 use crate::schema::transactions;
 
-#[derive(Queryable, Serialize, Deserialize)]
-pub struct CategoryType {
-    pub id: i32,
-    pub name: String
-}
-
-#[derive(Insertable, Serialize, Deserialize)]
-#[table_name="categorytypes"]
-pub struct NewCategoryType<'a> {
-    pub name: &'a str
+#[derive(DbEnum, Debug, Serialize, Deserialize, Copy, Clone)]
+pub enum CategoryTypes {
+    Expense,
+    Income
 }
 
 #[derive(Queryable, Serialize, Deserialize)]
 pub struct Category {
     pub id: i32,
-    pub categorytype: i32,
+    pub categorytype: CategoryTypes,
     pub name: String
 }
 
 #[derive(Insertable, Serialize, Deserialize)]
 #[table_name="categories"]
 pub struct NewCategory<'a> {
-    pub categorytype: i32,
+    pub categorytype: CategoryTypes,
     pub name: &'a str
 }
 

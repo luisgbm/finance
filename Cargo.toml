@@ -12,6 +12,10 @@ rocket_cors = "0.5.1"
 serde_json = "1.0"
 dotenv = "0.15.0"
 
+[dependencies.diesel-derive-enum]
+version = "1"
+features = ["postgres"]
+
 [dependencies.chrono]
 version = "0.4"
 features = ["serde"]

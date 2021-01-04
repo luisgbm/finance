@@ -1,5 +1,5 @@
 CREATE TABLE categories(
-    id           SERIAL PRIMARY KEY                   NOT NULL,
-    categorytype INTEGER REFERENCES categorytypes(id) NOT NULL,
-    name         TEXT                                 NOT NULL
+    id           SERIAL PRIMARY KEY NOT NULL,
+    categorytype category_types     NOT NULL,
+    name         TEXT               NOT NULL
 );

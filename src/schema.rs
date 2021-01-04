@@ -1,43 +1,41 @@
 table! {
+    use diesel::sql_types::{Integer, Text};
+
     accounts (id) {
-        id -> Int4,
+        id -> Integer,
         name -> Text,
     }
 }
 
 table! {
+    use crate::models::CategoryTypesMapping;
+    use diesel::sql_types::{Integer, Text};
+
     categories (id) {
-        id -> Int4,
-        categorytype -> Int4,
+        id -> Integer,
+        categorytype -> CategoryTypesMapping,
         name -> Text,
     }
 }
 
 table! {
-    categorytypes (id) {
-        id -> Int4,
-        name -> Text,
-    }
-}
+    use diesel::sql_types::{Integer, Text, Timestamp};
 
-table! {
     transactions (id) {
-        id -> Int4,
-        value -> Int4,
+        id -> Integer,
+        value -> Integer,
         description -> Text,
         date -> Timestamp,
-        account -> Int4,
-        category -> Int4,
+        account -> Integer,
+        category -> Integer,
     }
 }
 
-joinable!(categories -> categorytypes (categorytype));
 joinable!(transactions -> accounts (account));
 joinable!(transactions -> categories (category));
 
 allow_tables_to_appear_in_same_query!(
     accounts,
     categories,
-    categorytypes,
     transactions,
 );

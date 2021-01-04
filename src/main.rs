@@ -9,7 +9,7 @@ extern crate rocket;
 extern crate dotenv;
 
 use rocket_contrib::json::Json;
-use rocket::http::{Status};
+use rocket::http::{Status, Header};
 
 pub mod models;
 pub mod schema;
@@ -17,6 +17,8 @@ pub mod finance_db;
 
 use crate::finance_db::FinanceDB;
 use crate::models::{CategoryType, NewCategoryType, NewCategory, Category, Account, NewAccount, Transaction, NewTransaction, TransactionNoAccount};
+use rocket::fairing::{Fairing, Info, Kind};
+use rocket::{Request, Response};
 
 #[post("/transactions/account/<account_id>", format = "json", data = "<transaction>")]
 fn post_transaction(account_id: i32, transaction: Json<TransactionNoAccount>) -> Json<Transaction> {
@@ -162,9 +164,25 @@ fn delete_category_type(id: i32) -> Result<Json<CategoryType>, Status> {
     }
 }
 
-fn main() {
-    let cors = rocket_cors::CorsOptions::default().to_cors().unwrap();
+pub struct CORS();
 
+impl Fairing for CORS {
+    fn info(&self) -> Info {
+        Info {
+            name: "Add CORS headers to requests",
+            kind: Kind::Response
+        }
+    }
+
+    fn on_response(&self, _request: &Request, response: &mut Response) {
+        response.set_header(Header::new("Access-Control-Allow-Origin", "*"));
+        response.set_header(Header::new("Access-Control-Allow-Methods", "POST, GET, PATCH, OPTIONS, DELETE"));
+        response.set_header(Header::new("Access-Control-Allow-Headers", "*"));
+        response.set_header(Header::new("Access-Control-Allow-Credentials", "true"));
+    }
+}
+
+fn main() {
     rocket::ignite().mount("/", routes![
         post_category_type,
         get_category_types,
@@ -186,5 +204,5 @@ fn main() {
         get_transaction_with_id,
         patch_transaction,
         delete_transaction
-    ]).attach(cors).launch();
+    ]).attach(CORS()).launch();
 }

@@ -61,6 +61,7 @@ impl FinanceDB {
 
         transactions::table.inner_join(categories::table).inner_join(accounts::table)
             .filter(account.eq(account_id))
+            .order(date.desc())
             .load::<(Transaction, Category, Account)>(&self.connection)
             .expect(format!("Error loading transactions for account {}", account_id).as_str())
     }

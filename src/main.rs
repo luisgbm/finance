@@ -10,7 +10,7 @@ use rocket::http::Status;
 use rocket_contrib::json::Json;
 
 use crate::finance_db::FinanceDB;
-use crate::models::{Account, Category, CategoryTypes, NewAccount, NewCategory, NewTransaction, Transaction, TransactionJoined, TransactionNoAccount};
+use crate::models::{Account, AccountWithBalance, Category, CategoryTypes, NewAccount, NewCategory, NewTransaction, Transaction, TransactionJoined, TransactionNoAccount};
 
 pub mod models;
 pub mod schema;
@@ -54,8 +54,36 @@ fn get_transactions(account_id: i32) -> Json<Vec<TransactionJoined>> {
 }
 
 #[get("/accounts")]
-fn get_accounts() -> Json<Vec<Account>> {
-    Json(FinanceDB::new().get_all_accounts())
+fn get_accounts() -> Json<Vec<AccountWithBalance>> {
+    let accounts = FinanceDB::new().get_all_accounts();
+
+    let mut accounts_with_balance: Vec<AccountWithBalance> = Vec::new();
+    let mut balance: i32;
+
+    for account in &accounts {
+        balance = 0;
+
+        let transactions = FinanceDB::new().get_all_transactions_of_account_joined(account.id);
+
+        for transaction_tuple in &transactions {
+            let transaction = &transaction_tuple.0;
+            let category = &transaction_tuple.1;
+
+            if category.categorytype == CategoryTypes::Income {
+                balance += transaction.value;
+            } else if category.categorytype == CategoryTypes::Expense {
+                balance -= transaction.value;
+            }
+        }
+
+        accounts_with_balance.push(AccountWithBalance {
+            id: account.id,
+            name: account.name.clone(),
+            balance,
+        });
+    }
+
+    Json(accounts_with_balance)
 }
 
 #[get("/categories")]

@@ -6,7 +6,7 @@ use crate::schema::accounts;
 use crate::schema::categories;
 use crate::schema::transactions;
 
-#[derive(DbEnum, Debug, Serialize, Deserialize, Copy, Clone)]
+#[derive(DbEnum, Debug, Serialize, Deserialize, Copy, Clone, PartialEq)]
 pub enum CategoryTypes {
     Expense,
     Income
@@ -20,20 +20,27 @@ pub struct Category {
 }
 
 #[derive(Insertable, Serialize, Deserialize)]
-#[table_name="categories"]
+#[table_name = "categories"]
 pub struct NewCategory<'a> {
     pub categorytype: CategoryTypes,
-    pub name: &'a str
+    pub name: &'a str,
 }
 
 #[derive(Queryable, Serialize, Deserialize)]
 pub struct Account {
     pub id: i32,
-    pub name: String
+    pub name: String,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct AccountWithBalance {
+    pub id: i32,
+    pub name: String,
+    pub balance: i32,
 }
 
 #[derive(Insertable, Serialize, Deserialize)]
-#[table_name="accounts"]
+#[table_name = "accounts"]
 pub struct NewAccount<'a> {
     pub name: &'a str
 }

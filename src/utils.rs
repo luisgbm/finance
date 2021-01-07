@@ -1,4 +1,5 @@
-use crate::models::{Account, Category, Transaction, TransactionJoined};
+use crate::finance_db::FinanceDB;
+use crate::models::{Account, Category, CategoryTypes, Transaction, TransactionJoined};
 
 pub fn create_transaction_join(tuple: &(Transaction, Category, Account)) -> TransactionJoined {
     let transaction = &tuple.0;
@@ -16,4 +17,23 @@ pub fn create_transaction_join(tuple: &(Transaction, Category, Account)) -> Tran
         account_id: transaction.account,
         account_name: account.name.clone(),
     }
+}
+
+pub fn get_account_balance(account_id: i32) -> i32 {
+    let mut balance: i32 = 0;
+
+    let transactions = FinanceDB::new().get_all_transactions_of_account_joined(account_id);
+
+    for transaction_tuple in &transactions {
+        let transaction = &transaction_tuple.0;
+        let category = &transaction_tuple.1;
+
+        if category.categorytype == CategoryTypes::Income {
+            balance += transaction.value;
+        } else if category.categorytype == CategoryTypes::Expense {
+            balance -= transaction.value;
+        }
+    }
+
+    balance
 }

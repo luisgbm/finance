@@ -58,23 +58,9 @@ fn get_accounts() -> Json<Vec<AccountWithBalance>> {
     let accounts = FinanceDB::new().get_all_accounts();
 
     let mut accounts_with_balance: Vec<AccountWithBalance> = Vec::new();
-    let mut balance: i32;
 
     for account in &accounts {
-        balance = 0;
-
-        let transactions = FinanceDB::new().get_all_transactions_of_account_joined(account.id);
-
-        for transaction_tuple in &transactions {
-            let transaction = &transaction_tuple.0;
-            let category = &transaction_tuple.1;
-
-            if category.categorytype == CategoryTypes::Income {
-                balance += transaction.value;
-            } else if category.categorytype == CategoryTypes::Expense {
-                balance -= transaction.value;
-            }
-        }
+        let balance = utils::get_account_balance(account.id);
 
         accounts_with_balance.push(AccountWithBalance {
             id: account.id,
@@ -110,9 +96,17 @@ fn get_transaction_with_id(id: i32) -> Result<Json<TransactionJoined>, Status> {
 }
 
 #[get("/accounts/<id>")]
-fn get_account_with_id(id: i32) -> Result<Json<Account>, Status> {
+fn get_account_with_id(id: i32) -> Result<Json<AccountWithBalance>, Status> {
     match FinanceDB::new().get_account(id) {
-        Ok(account) => Ok(Json(account)),
+        Ok(account) => {
+            let balance = utils::get_account_balance(account.id);
+
+            Ok(Json(AccountWithBalance {
+                id: account.id,
+                name: account.name.clone(),
+                balance,
+            }))
+        },
         Err(_) => Err(Status::NotFound)
     }
 }

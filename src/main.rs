@@ -15,6 +15,7 @@ use crate::models::{Account, Category, CategoryTypes, NewAccount, NewCategory, N
 pub mod models;
 pub mod schema;
 pub mod finance_db;
+pub mod utils;
 
 #[post("/transactions/account/<account_id>", format = "json", data = "<transaction>")]
 fn post_transaction(account_id: i32, transaction: Json<TransactionNoAccount>) -> Json<Transaction> {
@@ -46,23 +47,7 @@ fn get_transactions(account_id: i32) -> Json<Vec<TransactionJoined>> {
     let joins = FinanceDB::new().get_all_transactions_of_account_joined(account_id);
 
     for join in &joins {
-        let transaction = &join.0;
-        let category = &join.1;
-        let account = &join.2;
-
-        transactions.push(
-            TransactionJoined {
-                id: transaction.id,
-                value: transaction.value,
-                description: transaction.description.clone(),
-                date: transaction.date,
-                category_id: transaction.category,
-                category_type: category.categorytype,
-                category_name: category.name.clone(),
-                account_id: transaction.account,
-                account_name: account.name.clone(),
-            }
-        );
+        transactions.push(utils::create_transaction_join(join));
     }
 
     Json(transactions)
@@ -91,23 +76,7 @@ fn get_income_categories() -> Json<Vec<Category>> {
 #[get("/transactions/<id>")]
 fn get_transaction_with_id(id: i32) -> Result<Json<TransactionJoined>, Status> {
     match FinanceDB::new().get_transaction(id) {
-        Ok(join) => {
-            let transaction = &join.0;
-            let category = &join.1;
-            let account = &join.2;
-
-            Ok(Json(TransactionJoined {
-                id: transaction.id,
-                value: transaction.value,
-                description: transaction.description.clone(),
-                date: transaction.date,
-                category_id: transaction.category,
-                category_type: category.categorytype,
-                category_name: category.name.clone(),
-                account_id: transaction.account,
-                account_name: account.name.clone(),
-            }))
-        },
+        Ok(join) => Ok(Json(utils::create_transaction_join(&join))),
         Err(_) => Err(Status::NotFound)
     }
 }

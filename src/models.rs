@@ -1,9 +1,9 @@
-use serde::{Serialize, Deserialize};
 use chrono::NaiveDateTime;
 use diesel_derive_enum::DbEnum;
+use serde::{Deserialize, Serialize};
 
-use crate::schema::categories;
 use crate::schema::accounts;
+use crate::schema::categories;
 use crate::schema::transactions;
 
 #[derive(DbEnum, Debug, Serialize, Deserialize, Copy, Clone)]
@@ -46,7 +46,19 @@ pub struct Transaction {
     pub date: NaiveDateTime,
     pub account: i32,
     pub category: i32
+}
 
+#[derive(Queryable, Serialize, Deserialize)]
+pub struct TransactionJoined {
+    pub id: i32,
+    pub value: i32,
+    pub description: String,
+    pub date: NaiveDateTime,
+    pub category_id: i32,
+    pub category_type: CategoryTypes,
+    pub category_name: String,
+    pub account_id: i32,
+    pub account_name: String,
 }
 
 #[derive(Insertable, Serialize, Deserialize)]

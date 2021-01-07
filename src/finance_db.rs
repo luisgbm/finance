@@ -1,10 +1,11 @@
-use diesel::prelude::*;
-use diesel::pg::PgConnection;
-use dotenv::dotenv;
 use std::env;
-use diesel::result::Error;
 
-use crate::models::{NewCategory, Category, Account, NewAccount, NewTransaction, Transaction};
+use diesel::pg::PgConnection;
+use diesel::prelude::*;
+use diesel::result::Error;
+use dotenv::dotenv;
+
+use crate::models::{Account, Category, NewAccount, NewCategory, NewTransaction, Transaction};
 
 pub struct FinanceDB {
     connection: PgConnection
@@ -50,6 +51,18 @@ impl FinanceDB {
             .values(new_category)
             .get_result(&self.connection)
             .expect("Error saving new category")
+    }
+
+    pub fn get_all_transactions_of_account_joined(&self, account_id: i32) -> Vec<(Transaction, Category, Account)> {
+        use crate::schema::transactions::dsl::*;
+        use crate::schema::transactions;
+        use crate::schema::categories;
+        use crate::schema::accounts;
+
+        transactions::table.inner_join(categories::table).inner_join(accounts::table)
+            .filter(account.eq(account_id))
+            .load::<(Transaction, Category, Account)>(&self.connection)
+            .expect(format!("Error loading transactions for account {}", account_id).as_str())
     }
 
     pub fn get_all_transactions_of_account(&self, account_id: i32) -> Vec<Transaction> {

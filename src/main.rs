@@ -2,21 +2,19 @@
 
 #[macro_use]
 extern crate diesel;
-
+extern crate dotenv;
 #[macro_use]
 extern crate rocket;
 
-extern crate dotenv;
-
+use rocket::http::Status;
 use rocket_contrib::json::Json;
-use rocket::http::{Status};
+
+use crate::finance_db::FinanceDB;
+use crate::models::{Account, Category, NewAccount, NewCategory, NewTransaction, Transaction, TransactionJoined, TransactionNoAccount};
 
 pub mod models;
 pub mod schema;
 pub mod finance_db;
-
-use crate::finance_db::FinanceDB;
-use crate::models::{NewCategory, Category, Account, NewAccount, Transaction, NewTransaction, TransactionNoAccount};
 
 #[post("/transactions/account/<account_id>", format = "json", data = "<transaction>")]
 fn post_transaction(account_id: i32, transaction: Json<TransactionNoAccount>) -> Json<Transaction> {
@@ -42,8 +40,32 @@ fn post_category(category: Json<NewCategory>) -> Json<Category> {
 }
 
 #[get("/transactions/account/<account_id>")]
-fn get_transactions(account_id: i32) -> Json<Vec<Transaction>> {
-    Json(FinanceDB::new().get_all_transactions_of_account(account_id))
+fn get_transactions(account_id: i32) -> Json<Vec<TransactionJoined>> {
+    let mut transactions = Vec::new();
+
+    let joins = FinanceDB::new().get_all_transactions_of_account_joined(account_id);
+
+    for join in &joins {
+        let transaction = &join.0;
+        let category = &join.1;
+        let account = &join.2;
+
+        transactions.push(
+            TransactionJoined {
+                id: transaction.id,
+                value: transaction.value,
+                description: transaction.description.clone(),
+                date: transaction.date,
+                category_id: transaction.category,
+                category_type: category.categorytype,
+                category_name: category.name.clone(),
+                account_id: transaction.account,
+                account_name: account.name.clone(),
+            }
+        );
+    }
+
+    Json(transactions)
 }
 
 #[get("/accounts")]

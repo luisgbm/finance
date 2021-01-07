@@ -5,7 +5,7 @@ use diesel::prelude::*;
 use diesel::result::Error;
 use dotenv::dotenv;
 
-use crate::models::{Account, Category, NewAccount, NewCategory, NewTransaction, Transaction};
+use crate::models::{Account, Category, CategoryTypes, NewAccount, NewCategory, NewTransaction, Transaction};
 
 pub struct FinanceDB {
     connection: PgConnection
@@ -65,15 +65,6 @@ impl FinanceDB {
             .expect(format!("Error loading transactions for account {}", account_id).as_str())
     }
 
-    pub fn get_all_transactions_of_account(&self, account_id: i32) -> Vec<Transaction> {
-        use crate::schema::transactions::dsl::*;
-
-        transactions
-            .filter(account.eq(account_id))
-            .load::<Transaction>(&self.connection)
-            .expect(format!("Error loading transactions for account {}", account_id).as_str())
-    }
-
     pub fn get_all_accounts(&self) -> Vec<Account> {
         use crate::schema::accounts::dsl::*;
 
@@ -90,12 +81,24 @@ impl FinanceDB {
             .expect("Error loading categories")
     }
 
-    pub fn get_transaction(&self, find_id: i32) -> Result<Transaction, Error> {
-        use crate::schema::transactions::dsl::*;
+    pub fn get_all_categories_by_type(&self, category_type: CategoryTypes) -> Vec<Category> {
+        use crate::schema::categories::dsl::*;
 
-        transactions
-            .find(find_id)
-            .first::<Transaction>(&self.connection)
+        categories
+            .filter(categorytype.eq(category_type))
+            .load::<Category>(&self.connection)
+            .expect("Error loading expense categories")
+    }
+
+    pub fn get_transaction(&self, find_id: i32) -> Result<(Transaction, Category, Account), Error> {
+        use crate::schema::transactions::dsl::*;
+        use crate::schema::transactions;
+        use crate::schema::categories;
+        use crate::schema::accounts;
+
+        transactions::table.inner_join(categories::table).inner_join(accounts::table)
+            .filter(id.eq(find_id))
+            .first::<(Transaction, Category, Account)>(&self.connection)
     }
 
     pub fn get_account(&self, find_id: i32) -> Result<Account, Error> {

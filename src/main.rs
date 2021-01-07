@@ -10,7 +10,7 @@ use rocket::http::Status;
 use rocket_contrib::json::Json;
 
 use crate::finance_db::FinanceDB;
-use crate::models::{Account, Category, NewAccount, NewCategory, NewTransaction, Transaction, TransactionJoined, TransactionNoAccount};
+use crate::models::{Account, Category, CategoryTypes, NewAccount, NewCategory, NewTransaction, Transaction, TransactionJoined, TransactionNoAccount};
 
 pub mod models;
 pub mod schema;
@@ -78,10 +78,36 @@ fn get_categories() -> Json<Vec<Category>> {
     Json(FinanceDB::new().get_all_categories())
 }
 
+#[get("/categories/expense")]
+fn get_expense_categories() -> Json<Vec<Category>> {
+    Json(FinanceDB::new().get_all_categories_by_type(CategoryTypes::Expense))
+}
+
+#[get("/categories/income")]
+fn get_income_categories() -> Json<Vec<Category>> {
+    Json(FinanceDB::new().get_all_categories_by_type(CategoryTypes::Income))
+}
+
 #[get("/transactions/<id>")]
-fn get_transaction_with_id(id: i32) -> Result<Json<Transaction>, Status> {
+fn get_transaction_with_id(id: i32) -> Result<Json<TransactionJoined>, Status> {
     match FinanceDB::new().get_transaction(id) {
-        Ok(transaction) => Ok(Json(transaction)),
+        Ok(join) => {
+            let transaction = &join.0;
+            let category = &join.1;
+            let account = &join.2;
+
+            Ok(Json(TransactionJoined {
+                id: transaction.id,
+                value: transaction.value,
+                description: transaction.description.clone(),
+                date: transaction.date,
+                category_id: transaction.category,
+                category_type: category.categorytype,
+                category_name: category.name.clone(),
+                account_id: transaction.account,
+                account_name: account.name.clone(),
+            }))
+        },
         Err(_) => Err(Status::NotFound)
     }
 }
@@ -156,6 +182,8 @@ fn main() {
     rocket::ignite().mount("/", routes![
         post_category,
         get_categories,
+        get_expense_categories,
+        get_income_categories,
         get_category_with_id,
         patch_category,
         delete_category,

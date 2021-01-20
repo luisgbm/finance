@@ -11,6 +11,7 @@ pub mod schema;
 pub mod finance_db;
 pub mod utils;
 pub mod routes;
+pub mod jwt;
 
 fn main() {
     let cors = rocket_cors::CorsOptions::default().to_cors().unwrap();

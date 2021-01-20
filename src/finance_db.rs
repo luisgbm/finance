@@ -1,4 +1,5 @@
 use std::env;
+use std::str::FromStr;
 
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
@@ -33,10 +34,18 @@ impl FinanceDB {
         sql_function!(fn gen_salt(salt_type: Text, iter: Integer) -> Text);
         sql_function!(fn crypt(password: Text, salt: Text) -> Text);
 
+        dotenv().ok();
+
+        let bf_rounds = env::var("BF_ROUNDS")
+            .expect("BF_ROUNDS must be set");
+
+        let bf_rounds = i32::from_str(bf_rounds.as_str())
+            .expect("BF_ROUNDS must be numeric");
+
         diesel::insert_into(users::table)
             .values((
                 users::name.eq(new_user.name.clone()),
-                users::password.eq(crypt(new_user.password.clone(), gen_salt("bf", 10)))
+                users::password.eq(crypt(new_user.password.clone(), gen_salt("bf", bf_rounds)))
             ))
             .get_result(&self.connection)
     }

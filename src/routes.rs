@@ -4,6 +4,7 @@ use rocket::http::Status;
 use rocket_contrib::json::Json;
 
 use crate::finance_db::FinanceDB;
+use crate::jwt;
 use crate::models::{Account, AccountWithBalance, Category,
                     CategoryTypes, NewAccount, NewCategory,
                     NewTransaction, NewUser, Transaction, TransactionJoined,
@@ -11,11 +12,13 @@ use crate::models::{Account, AccountWithBalance, Category,
 use crate::utils;
 
 #[post("/login", format = "json", data = "<user>")]
-pub fn login(user: Json<NewUser>) -> Result<Status, Status> {
+pub fn login(user: Json<NewUser>) -> Result<String, Status> {
     let result = FinanceDB::new().authenticate_user(&user);
 
     match result {
-        Ok(_user) => Ok(Status::Ok),
+        Ok(user) => {
+            Ok(jwt::create_jwt(&user.name))
+        },
         Err(_) => Err(Status::Unauthorized)
     }
 }

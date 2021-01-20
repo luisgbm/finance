@@ -11,6 +11,7 @@ rocket = "0.4.6"
 rocket_cors = "0.5.1"
 serde_json = "1.0"
 dotenv = "0.15.0"
+jsonwebtoken = "7"
 
 [dependencies.diesel-derive-enum]
 version = "1"

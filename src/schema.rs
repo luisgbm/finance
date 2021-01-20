@@ -31,6 +31,16 @@ table! {
     }
 }
 
+table! {
+    use diesel::sql_types::{Integer, Text};
+
+    users (id) {
+        id -> Integer,
+        name -> Text,
+        password -> Text,
+    }
+}
+
 joinable!(transactions -> accounts (account));
 joinable!(transactions -> categories (category));
 
@@ -38,4 +48,5 @@ allow_tables_to_appear_in_same_query!(
     accounts,
     categories,
     transactions,
+    users,
 );

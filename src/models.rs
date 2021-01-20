@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::schema::accounts;
 use crate::schema::categories;
 use crate::schema::transactions;
+use crate::schema::users;
 
 #[derive(DbEnum, Debug, Serialize, Deserialize, Copy, Clone, PartialEq)]
 pub enum CategoryTypes {
@@ -83,5 +84,19 @@ pub struct TransactionNoAccount {
     pub value: i32,
     pub description: String,
     pub date: NaiveDateTime,
-    pub category: i32
+    pub category: i32,
+}
+
+#[derive(Queryable, Serialize, Deserialize)]
+pub struct User {
+    pub id: i32,
+    pub name: String,
+    pub password: String,
+}
+
+#[derive(Insertable, Serialize, Deserialize)]
+#[table_name = "users"]
+pub struct NewUser<'a> {
+    pub name: &'a str,
+    pub password: &'a str,
 }

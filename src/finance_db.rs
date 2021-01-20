@@ -5,7 +5,7 @@ use diesel::prelude::*;
 use diesel::result::Error;
 use dotenv::dotenv;
 
-use crate::models::{Account, Category, CategoryTypes, NewAccount, NewCategory, NewTransaction, Transaction};
+use crate::models::{Account, Category, CategoryTypes, NewAccount, NewCategory, NewTransaction, NewUser, Transaction, User};
 
 pub struct FinanceDB {
     connection: PgConnection
@@ -24,6 +24,21 @@ impl FinanceDB {
         FinanceDB {
             connection
         }
+    }
+
+    pub fn new_user(&self, new_user: &NewUser) -> QueryResult<User> {
+        use crate::schema::users;
+        use diesel::sql_types::{Integer, Text};
+
+        sql_function!(fn gen_salt(salt_type: Text, iter: Integer) -> Text);
+        sql_function!(fn crypt(password: Text, salt: Text) -> Text);
+
+        diesel::insert_into(users::table)
+            .values((
+                users::name.eq(new_user.name.clone()),
+                users::password.eq(crypt(new_user.password.clone(), gen_salt("bf", 10)))
+            ))
+            .get_result(&self.connection)
     }
 
     pub fn new_transaction(&self, new_transaction: &NewTransaction) -> Transaction {
@@ -51,6 +66,33 @@ impl FinanceDB {
             .values(new_category)
             .get_result(&self.connection)
             .expect("Error saving new category")
+    }
+
+    pub fn get_user_by_name(&self, user_name: &str) -> QueryResult<User> {
+        use crate::schema::users::dsl::*;
+
+        users
+            .filter(name.eq(user_name))
+            .first::<User>(&self.connection)
+    }
+
+    pub fn authenticate_user(&self, user: &NewUser) -> QueryResult<User> {
+        use crate::schema::users::dsl::*;
+        use diesel::sql_types::Text;
+
+        sql_function!(fn crypt(provided_password: Text, password_in_db: Text) -> Text);
+
+        let user_in_db = self.get_user_by_name(&user.name);
+
+        match user_in_db {
+            Ok(user_in_db) => {
+                users
+                    .filter(name.eq(user.name))
+                    .filter(password.eq(crypt(user.password, user_in_db.password)))
+                    .first::<User>(&self.connection)
+            },
+            Err(err) => Err(err)
+        }
     }
 
     pub fn get_all_transactions_of_account_joined(&self, account_id: i32) -> Vec<(Transaction, Category, Account)> {

@@ -4,6 +4,7 @@ table! {
     accounts (id) {
         id -> Integer,
         name -> Text,
+        user_id -> Integer,
     }
 }
 
@@ -15,6 +16,7 @@ table! {
         id -> Integer,
         categorytype -> CategoryTypesMapping,
         name -> Text,
+        user_id -> Integer,
     }
 }
 
@@ -28,13 +30,14 @@ table! {
         date -> Timestamp,
         account -> Integer,
         category -> Integer,
+        user_id -> Integer,
     }
 }
 
 table! {
     use diesel::sql_types::{Integer, Text};
 
-    users (id) {
+    app_users (id) {
         id -> Integer,
         name -> Text,
         password -> Text,
@@ -43,10 +46,13 @@ table! {
 
 joinable!(transactions -> accounts (account));
 joinable!(transactions -> categories (category));
+joinable!(transactions -> app_users (user_id));
+joinable!(accounts -> app_users (user_id));
+joinable!(categories -> app_users (user_id));
 
 allow_tables_to_appear_in_same_query!(
     accounts,
     categories,
     transactions,
-    users,
+    app_users
 );

@@ -6,7 +6,7 @@ use diesel::prelude::*;
 use diesel::result::Error;
 use dotenv::dotenv;
 
-use crate::models::{Account, Category, CategoryTypes, NewAccount, NewCategory, NewTransaction, NewUser, Transaction, User};
+use crate::models::{Account, AppUser, Category, CategoryTypes, NewAccount, NewAppUser, NewCategory, NewTransaction, Transaction};
 
 pub struct FinanceDB {
     connection: PgConnection
@@ -27,8 +27,8 @@ impl FinanceDB {
         }
     }
 
-    pub fn new_user(&self, new_user: &NewUser) -> QueryResult<User> {
-        use crate::schema::users;
+    pub fn new_user(&self, new_user: &NewAppUser) -> QueryResult<AppUser> {
+        use crate::schema::app_users;
         use diesel::sql_types::{Integer, Text};
 
         sql_function!(fn gen_salt(salt_type: Text, iter: Integer) -> Text);
@@ -42,10 +42,10 @@ impl FinanceDB {
         let bf_rounds = i32::from_str(bf_rounds.as_str())
             .expect("BF_ROUNDS must be numeric");
 
-        diesel::insert_into(users::table)
+        diesel::insert_into(app_users::table)
             .values((
-                users::name.eq(new_user.name.clone()),
-                users::password.eq(crypt(new_user.password.clone(), gen_salt("bf", bf_rounds)))
+                app_users::name.eq(new_user.name.clone()),
+                app_users::password.eq(crypt(new_user.password.clone(), gen_salt("bf", bf_rounds)))
             ))
             .get_result(&self.connection)
     }
@@ -77,16 +77,16 @@ impl FinanceDB {
             .expect("Error saving new category")
     }
 
-    pub fn get_user_by_name(&self, user_name: &str) -> QueryResult<User> {
-        use crate::schema::users::dsl::*;
+    pub fn get_user_by_name(&self, user_name: &str) -> QueryResult<AppUser> {
+        use crate::schema::app_users::dsl::*;
 
-        users
+        app_users
             .filter(name.eq(user_name))
-            .first::<User>(&self.connection)
+            .first::<AppUser>(&self.connection)
     }
 
-    pub fn authenticate_user(&self, user: &NewUser) -> QueryResult<User> {
-        use crate::schema::users::dsl::*;
+    pub fn authenticate_user(&self, user: &NewAppUser) -> QueryResult<AppUser> {
+        use crate::schema::app_users::dsl::*;
         use diesel::sql_types::Text;
 
         sql_function!(fn crypt(provided_password: Text, password_in_db: Text) -> Text);
@@ -95,127 +95,134 @@ impl FinanceDB {
 
         match user_in_db {
             Ok(user_in_db) => {
-                users
+                app_users
                     .filter(name.eq(user.name))
                     .filter(password.eq(crypt(user.password, user_in_db.password)))
-                    .first::<User>(&self.connection)
+                    .first::<AppUser>(&self.connection)
             },
             Err(err) => Err(err)
         }
     }
 
-    pub fn get_all_transactions_of_account_joined(&self, account_id: i32) -> Vec<(Transaction, Category, Account)> {
+    pub fn get_all_transactions_of_account_joined(&self, account_id: i32, app_user_id: i32) -> Vec<(Transaction, Category, Account)> {
         use crate::schema::transactions::dsl::*;
         use crate::schema::transactions;
         use crate::schema::categories;
         use crate::schema::accounts;
 
         transactions::table.inner_join(categories::table).inner_join(accounts::table)
+            .filter(user_id.eq(app_user_id))
             .filter(account.eq(account_id))
             .order(date.desc())
             .load::<(Transaction, Category, Account)>(&self.connection)
             .expect(format!("Error loading transactions for account {}", account_id).as_str())
     }
 
-    pub fn get_all_accounts(&self) -> Vec<Account> {
+    pub fn get_all_accounts(&self, app_user_id: i32) -> Vec<Account> {
         use crate::schema::accounts::dsl::*;
 
         accounts
+            .filter(user_id.eq(app_user_id))
             .load::<Account>(&self.connection)
             .expect("Error loading accounts")
     }
 
-    pub fn get_all_categories(&self) -> Vec<Category> {
+    pub fn get_all_categories(&self, app_user_id: i32) -> Vec<Category> {
         use crate::schema::categories::dsl::*;
 
         categories
+            .filter(user_id.eq(app_user_id))
             .load::<Category>(&self.connection)
             .expect("Error loading categories")
     }
 
-    pub fn get_all_categories_by_type(&self, category_type: CategoryTypes) -> Vec<Category> {
+    pub fn get_all_categories_by_type(&self, category_type: CategoryTypes, app_user_id: i32) -> Vec<Category> {
         use crate::schema::categories::dsl::*;
 
         categories
+            .filter(user_id.eq(app_user_id))
             .filter(categorytype.eq(category_type))
             .load::<Category>(&self.connection)
             .expect("Error loading expense categories")
     }
 
-    pub fn get_transaction(&self, find_id: i32) -> Result<(Transaction, Category, Account), Error> {
+    pub fn get_transaction(&self, find_id: i32, app_user_id: i32) -> Result<(Transaction, Category, Account), Error> {
         use crate::schema::transactions::dsl::*;
         use crate::schema::transactions;
         use crate::schema::categories;
         use crate::schema::accounts;
 
         transactions::table.inner_join(categories::table).inner_join(accounts::table)
+            .filter(user_id.eq(app_user_id))
             .filter(id.eq(find_id))
             .first::<(Transaction, Category, Account)>(&self.connection)
     }
 
-    pub fn get_account(&self, find_id: i32) -> Result<Account, Error> {
+    pub fn get_account(&self, find_id: i32, app_user_id: i32) -> Result<Account, Error> {
         use crate::schema::accounts::dsl::*;
 
         accounts
+            .filter(user_id.eq(app_user_id))
             .find(find_id)
             .first::<Account>(&self.connection)
     }
 
-    pub fn get_category(&self, find_id: i32) -> Result<Category, Error> {
+    pub fn get_category(&self, find_id: i32, app_user_id: i32) -> Result<Category, Error> {
         use crate::schema::categories::dsl::*;
 
         categories
+            .filter(user_id.eq(app_user_id))
             .find(find_id)
             .first::<Category>(&self.connection)
     }
 
-    pub fn update_transaction(&self, update_id: i32, update_transaction: &NewTransaction) -> Result<Transaction, Error> {
+    pub fn update_transaction(&self, update_id: i32, update_transaction: &NewTransaction, app_user_id: i32) -> Result<Transaction, Error> {
         use crate::schema::transactions::dsl::*;
 
-        diesel::update(transactions.find(update_id))
+        diesel::update(transactions.filter(user_id.eq(app_user_id)).find(update_id))
             .set((
-                 value.eq(update_transaction.value),
-           description.eq(update_transaction.description),
-                  date.eq(update_transaction.date),
-               account.eq(update_transaction.account),
-              category.eq(update_transaction.category)))
+                value.eq(update_transaction.value),
+                description.eq(update_transaction.description),
+                date.eq(update_transaction.date),
+                account.eq(update_transaction.account),
+                category.eq(update_transaction.category)))
             .get_result::<Transaction>(&self.connection)
     }
 
-    pub fn update_account(&self, update_id: i32, update_account: &NewAccount) -> Result<Account, Error> {
+    pub fn update_account(&self, update_id: i32, update_account: &NewAccount, app_user_id: i32) -> Result<Account, Error> {
         use crate::schema::accounts::dsl::*;
 
-        diesel::update(accounts.find(update_id))
+        diesel::update(accounts.filter(user_id.eq(app_user_id)).find(update_id))
             .set(name.eq(update_account.name))
             .get_result::<Account>(&self.connection)
     }
 
-    pub fn update_category(&self, update_id: i32, update_category: &NewCategory) -> Result<Category, Error> {
+    pub fn update_category(&self, update_id: i32, update_category: &NewCategory, app_user_id: i32) -> Result<Category, Error> {
         use crate::schema::categories::dsl::*;
 
-        diesel::update(categories.find(update_id))
+        diesel::update(categories.filter(user_id.eq(app_user_id)).find(update_id))
             .set((name.eq(update_category.name), categorytype.eq(update_category.categorytype)))
             .get_result::<Category>(&self.connection)
     }
 
-    pub fn delete_transaction(&self, delete_id: i32) -> Result<Transaction, Error> {
+    pub fn delete_transaction(&self, delete_id: i32, app_user_id: i32) -> Result<Transaction, Error> {
         use crate::schema::transactions::dsl::*;
 
-        diesel::delete(transactions.find(delete_id))
+        diesel::delete(transactions.filter(user_id.eq(app_user_id)).find(delete_id))
             .get_result::<Transaction>(&self.connection)
     }
 
-    pub fn delete_account(&self, delete_id: i32) -> Result<Account, Error> {
+    pub fn delete_account(&self, delete_id: i32, app_user_id: i32) -> Result<Account, Error> {
         use crate::schema::accounts::dsl::*;
 
-        diesel::delete(accounts.find(delete_id))
+        diesel::delete(accounts.filter(user_id.eq(app_user_id)).find(delete_id))
             .get_result::<Account>(&self.connection)
     }
 
-    pub fn delete_category(&self, delete_id: i32) -> Result<Category, Error> {
+    pub fn delete_category(&self, delete_id: i32, app_user_id: i32) -> Result<Category, Error> {
         use crate::schema::categories::dsl::*;
 
-        diesel::delete(categories.find(delete_id))
+        diesel::delete(categories.filter(user_id.eq(app_user_id)).find(delete_id))
             .get_result::<Category>(&self.connection)
     }
 }

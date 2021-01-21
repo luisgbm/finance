@@ -1,7 +1,7 @@
 use crate::finance_db::FinanceDB;
 use crate::models::{Account, Category, CategoryTypes, Transaction, TransactionJoined};
 
-pub fn create_transaction_join(tuple: &(Transaction, Category, Account)) -> TransactionJoined {
+pub fn create_transaction_join(tuple: &(Transaction, Category, Account), user_id: i32) -> TransactionJoined {
     let transaction = &tuple.0;
     let category = &tuple.1;
     let account = &tuple.2;
@@ -16,13 +16,14 @@ pub fn create_transaction_join(tuple: &(Transaction, Category, Account)) -> Tran
         category_name: category.name.clone(),
         account_id: transaction.account,
         account_name: account.name.clone(),
+        user_id
     }
 }
 
-pub fn get_account_balance(account_id: i32) -> i32 {
+pub fn get_account_balance(account_id: i32, user_id: i32) -> i32 {
     let mut balance: i32 = 0;
 
-    let transactions = FinanceDB::new().get_all_transactions_of_account_joined(account_id);
+    let transactions = FinanceDB::new().get_all_transactions_of_account_joined(account_id, user_id);
 
     for transaction_tuple in &transactions {
         let transaction = &transaction_tuple.0;

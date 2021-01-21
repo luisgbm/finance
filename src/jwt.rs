@@ -9,17 +9,17 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
-    user_name: String,
+    pub user_id: i32,
     #[serde(with = "jwt_numeric_date")]
-    iat: DateTime<Utc>,
+    pub iat: DateTime<Utc>,
     #[serde(with = "jwt_numeric_date")]
-    exp: DateTime<Utc>,
+    pub exp: DateTime<Utc>,
 }
 
 impl Claims {
-    pub fn new(user_name: String, iat: DateTime<Utc>, exp: DateTime<Utc>) -> Self {
+    pub fn new(user_id: i32, iat: DateTime<Utc>, exp: DateTime<Utc>) -> Self {
         Self {
-            user_name,
+            user_id,
             iat: iat.date().and_hms_milli(iat.hour(), iat.minute(), iat.second(), 0),
             exp: exp.date().and_hms_milli(exp.hour(), exp.minute(), exp.second(), 0),
         }
@@ -48,7 +48,7 @@ mod jwt_numeric_date {
     }
 }
 
-pub fn create_jwt(user_name: &String) -> String {
+pub fn create_jwt(user_id: i32) -> String {
     dotenv().ok();
 
     let jwt_validity_days = env::var("JWT_VALIDITY_DAYS")
@@ -60,7 +60,7 @@ pub fn create_jwt(user_name: &String) -> String {
     let iat = Utc::now();
     let exp = iat + chrono::Duration::days(jwt_validity_days);
 
-    let claims = Claims::new(user_name.to_string(), iat, exp);
+    let claims = Claims::new(user_id, iat, exp);
 
     let jwt_secret = env::var("JWT_SECRET")
         .expect("JWT_SECRET must be set");

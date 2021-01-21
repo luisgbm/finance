@@ -1,0 +1,6 @@
+DROP EXTENSION pgcrypto;
+DROP TABLE categories CASCADE;
+DROP TABLE transactions CASCADE;
+DROP TABLE app_users CASCADE;
+DROP TABLE accounts CASCADE;
+DROP TYPE category_types CASCADE;

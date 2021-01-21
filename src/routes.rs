@@ -97,20 +97,23 @@ pub fn post_user(user_json: Json<NewAppUser>) -> Result<String, Status> {
 
 #[post("/transactions/account/<account_id>", format = "json", data = "<transaction>")]
 pub fn post_transaction(account_id: i32, transaction: Json<TransactionNoAccount>, auth: Authentication) -> Result<Json<Transaction>, Status> {
-    let account = FinanceDB::new().get_account(account_id, auth.token.claims.user_id);
-
-    match account {
+    match FinanceDB::new().get_account(account_id, auth.token.claims.user_id) {
         Ok(_) => {
-            let t = NewTransaction {
-                value: transaction.value,
-                description: transaction.description.as_str(),
-                date: transaction.date,
-                account: account_id,
-                category: transaction.category,
-                user_id: auth.token.claims.user_id,
-            };
+            match FinanceDB::new().get_category(transaction.category, auth.token.claims.user_id) {
+                Ok(_) => {
+                    let t = NewTransaction {
+                        value: transaction.value,
+                        description: transaction.description.as_str(),
+                        date: transaction.date,
+                        account: account_id,
+                        category: transaction.category,
+                        user_id: auth.token.claims.user_id,
+                    };
 
-            return Ok(Json(FinanceDB::new().new_transaction(&t)))
+                    return Ok(Json(FinanceDB::new().new_transaction(&t)))
+                }
+                Err(_) => Err(Status::NotFound)
+            }
         }
         Err(_) => Err(Status::NotFound)
     }
@@ -229,19 +232,27 @@ pub fn get_category_with_id(id: i32, auth: Authentication) -> Result<Json<Catego
 
 #[patch("/transactions/<id>", format = "json", data = "<transaction>")]
 pub fn patch_transaction(id: i32, transaction: Json<TransactionNoUser>, auth: Authentication) -> Result<Json<Transaction>, Status> {
-    let transaction = transaction.into_inner();
+    match FinanceDB::new().get_account(transaction.account, auth.token.claims.user_id) {
+        Ok(_) => {
+            match FinanceDB::new().get_category(transaction.category, auth.token.claims.user_id) {
+                Ok(_) => {
+                    let transaction = NewTransaction {
+                        value: transaction.value,
+                        description: transaction.description.clone(),
+                        date: transaction.date.clone(),
+                        account: transaction.account,
+                        category: transaction.category,
+                        user_id: auth.token.claims.user_id,
+                    };
 
-    let transaction = NewTransaction {
-        value: transaction.value,
-        description: transaction.description.clone(),
-        date: transaction.date.clone(),
-        account: transaction.account,
-        category: transaction.category,
-        user_id: auth.token.claims.user_id,
-    };
-
-    match FinanceDB::new().update_transaction(id, &transaction, auth.token.claims.user_id) {
-        Ok(transaction) => Ok(Json(transaction)),
+                    match FinanceDB::new().update_transaction(id, &transaction, auth.token.claims.user_id) {
+                        Ok(transaction) => Ok(Json(transaction)),
+                        Err(_) => Err(Status::NotFound)
+                    }
+                }
+                Err(_) => Err(Status::NotFound)
+            }
+        }
         Err(_) => Err(Status::NotFound)
     }
 }

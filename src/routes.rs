@@ -9,7 +9,7 @@ use rocket_contrib::json::Json;
 use crate::finance_db::FinanceDB;
 use crate::jwt;
 use crate::jwt::Claims;
-use crate::models::{Account, AccountNoUser, AccountWithBalance, Category, CategoryNoUser, CategoryTypes, NewAccount, NewAppUser, NewCategory, NewTransaction, Token, Transaction, TransactionJoined, TransactionNoAccount, TransactionNoUser};
+use crate::models::{Account, AccountNoUser, AccountWithBalance, Category, CategoryNoUser, CategoryTypes, NewAccount, NewAppUser, NewCategory, NewTransaction, Transaction, TransactionJoined, TransactionNoAccount, TransactionNoUser};
 use crate::utils;
 
 #[derive(Debug)]
@@ -67,14 +67,9 @@ pub fn login(user: Json<NewAppUser>) -> Result<String, Status> {
     login_internal(&user.into_inner())
 }
 
-#[post("/token", format = "json", data = "<token_data>")]
-pub fn validate_token(token_data: Json<Token>) -> Status {
-    let token_data = token_data.into_inner();
-
-    match jwt::validate_jwt(&token_data.token) {
-        Ok(_) => Status::Ok,
-        Err(_) => Status::Unauthorized
-    }
+#[get("/token")]
+pub fn validate_token(_auth: Authentication) -> Status {
+    Status::Ok
 }
 
 #[post("/users", format = "json", data = "<user_json>")]

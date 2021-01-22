@@ -128,3 +128,8 @@ pub struct NewAppUser<'a> {
     pub name: &'a str,
     pub password: &'a str,
 }
+
+#[derive(Serialize, Deserialize)]
+pub struct Token {
+    pub token: String
+}

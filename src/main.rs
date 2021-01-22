@@ -35,6 +35,7 @@ fn main() {
         routes::patch_transaction,
         routes::delete_transaction,
         routes::post_user,
-        routes::login
+        routes::login,
+        routes::validate_token
     ]).attach(cors).launch();
 }

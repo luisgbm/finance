@@ -1,5 +1,30 @@
 use crate::finance_db::FinanceDB;
-use crate::models::{Account, Category, CategoryTypes, Transaction, TransactionJoined};
+use crate::models::{Account, Category, CategoryTypes, Transaction, TransactionJoined, Transfer};
+
+pub fn create_transaction_from_transfer(transfer: &Transfer, category_type: CategoryTypes) -> TransactionJoined {
+    let mut transfer_account_id = 0;
+
+    if category_type == CategoryTypes::Expense {
+        transfer_account_id = transfer.origin_account;
+    } else {
+        transfer_account_id = transfer.destination_account;
+    }
+
+    let transaction = TransactionJoined {
+        id: transfer.id,
+        value: transfer.value,
+        description: transfer.description.clone(),
+        date: transfer.date,
+        category_id: 0,
+        category_type,
+        category_name: "".to_string(),
+        account_id: transfer_account_id,
+        account_name: "".to_string(),
+        user_id: transfer.user_id,
+    };
+
+    transaction
+}
 
 pub fn create_transaction_join(tuple: &(Transaction, Category, Account), user_id: i32) -> TransactionJoined {
     let transaction = &tuple.0;

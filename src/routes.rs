@@ -9,7 +9,7 @@ use rocket_contrib::json::Json;
 use crate::finance_db::FinanceDB;
 use crate::jwt;
 use crate::jwt::Claims;
-use crate::models::{Account, AccountNoUser, AccountWithBalance, Category, CategoryNoUser, CategoryTypes, NewAccount, NewAppUser, NewCategory, NewTransaction, Transaction, TransactionJoined, TransactionNoAccount, TransactionNoUser};
+use crate::models::{Account, AccountNoUser, AccountWithBalance, Category, CategoryNoUser, CategoryTypes, NewAccount, NewAppUser, NewCategory, NewTransaction, NewTransfer, Transaction, TransactionJoined, TransactionNoAccount, TransactionNoUser, Transfer, TransferNoUser};
 use crate::utils;
 
 #[derive(Debug)]
@@ -100,6 +100,32 @@ pub fn post_user(user_json: Json<NewAppUser>) -> Result<String, Status> {
     }
 }
 
+#[post("/transfers/from/<origin_account>/to/<destination_account>", format = "json", data = "<new_transfer>")]
+pub fn post_transfer(origin_account: i32, destination_account: i32, new_transfer: Json<TransferNoUser>, auth: Authentication) -> Result<Json<Transfer>, Status> {
+    match FinanceDB::new().get_account(origin_account, auth.token.claims.user_id) {
+        Ok(_) => {
+            match FinanceDB::new().get_account(destination_account, auth.token.claims.user_id) {
+                Ok(_) => {
+                    let transfer: TransferNoUser = new_transfer.into_inner();
+
+                    let transfer = NewTransfer {
+                        origin_account,
+                        destination_account,
+                        value: transfer.value,
+                        description: transfer.description,
+                        date: transfer.date,
+                        user_id: auth.token.claims.user_id,
+                    };
+
+                    Ok(Json(FinanceDB::new().new_transfer(&transfer)))
+                }
+                Err(_) => Err(Status::NotFound)
+            }
+        }
+        Err(_) => Err(Status::NotFound)
+    }
+}
+
 #[post("/transactions/account/<account_id>", format = "json", data = "<transaction>")]
 pub fn post_transaction(account_id: i32, transaction: Json<TransactionNoAccount>, auth: Authentication) -> Result<Json<Transaction>, Status> {
     match FinanceDB::new().get_account(account_id, auth.token.claims.user_id) {
@@ -149,9 +175,7 @@ pub fn post_category(category: Json<CategoryNoUser>, auth: Authentication) -> Js
 
 #[get("/transactions/account/<account_id>")]
 pub fn get_transactions(account_id: i32, auth: Authentication) -> Result<Json<Vec<TransactionJoined>>, Status> {
-    let account = FinanceDB::new().get_account(account_id, auth.token.claims.user_id);
-
-    match account {
+    match FinanceDB::new().get_account(account_id, auth.token.claims.user_id) {
         Ok(_) => {
             let mut transactions = Vec::new();
 
@@ -159,6 +183,18 @@ pub fn get_transactions(account_id: i32, auth: Authentication) -> Result<Json<Ve
 
             for join in &joins {
                 transactions.push(utils::create_transaction_join(join, auth.token.claims.user_id));
+            }
+
+            let transfers_from = FinanceDB::new().get_transfers_from_account(account_id, auth.token.claims.user_id);
+
+            for transfer_from in &transfers_from {
+                transactions.push(utils::create_transaction_from_transfer(transfer_from, CategoryTypes::TransferExpense));
+            }
+
+            let transfers_to = FinanceDB::new().get_transfers_to_account(account_id, auth.token.claims.user_id);
+
+            for transfer_to in &transfers_to {
+                transactions.push(utils::create_transaction_from_transfer(transfer_to, CategoryTypes::TransferIncome));
             }
 
             return Ok(Json(transactions))

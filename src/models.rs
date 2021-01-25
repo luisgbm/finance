@@ -6,11 +6,14 @@ use crate::schema::accounts;
 use crate::schema::app_users;
 use crate::schema::categories;
 use crate::schema::transactions;
+use crate::schema::transfers;
 
 #[derive(DbEnum, Debug, Serialize, Deserialize, Copy, Clone, PartialEq)]
 pub enum CategoryTypes {
     Expense,
     Income,
+    TransferIncome,
+    TransferExpense,
 }
 
 #[derive(Queryable, Serialize, Deserialize)]
@@ -128,3 +131,34 @@ pub struct NewAppUser<'a> {
     pub name: &'a str,
     pub password: &'a str,
 }
+
+#[derive(Queryable, Serialize, Deserialize)]
+pub struct Transfer {
+    pub id: i32,
+    pub origin_account: i32,
+    pub destination_account: i32,
+    pub value: i32,
+    pub description: String,
+    pub date: NaiveDateTime,
+    pub user_id: i32,
+}
+
+#[derive(Insertable, Serialize, Deserialize)]
+#[table_name = "transfers"]
+pub struct NewTransfer<'a> {
+    pub origin_account: i32,
+    pub destination_account: i32,
+    pub value: i32,
+    pub description: &'a str,
+    pub date: NaiveDateTime,
+    pub user_id: i32,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct TransferNoUser<'a> {
+    pub value: i32,
+    pub description: &'a str,
+    pub date: NaiveDateTime,
+}
+
+pub type EditTransferNoUser<'a> = TransferNoUser<'a>;

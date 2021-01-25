@@ -5,6 +5,6 @@
 /dataSources/
 /dataSources.local.xml
 # Datasource
-dataSources.xml
+./dataSources.xml
 # Editor-based HTTP Client requests
 /httpRequests/

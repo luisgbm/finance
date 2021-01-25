@@ -44,15 +44,31 @@ table! {
     }
 }
 
+table! {
+    use diesel::sql_types::{Integer, Text, Timestamp};
+
+    transfers (id) {
+        id -> Integer,
+        origin_account -> Integer,
+        destination_account -> Integer,
+        value -> Integer,
+        description -> Text,
+        date -> Timestamp,
+        user_id -> Integer,
+    }
+}
+
 joinable!(transactions -> accounts (account));
 joinable!(transactions -> categories (category));
 joinable!(transactions -> app_users (user_id));
 joinable!(accounts -> app_users (user_id));
 joinable!(categories -> app_users (user_id));
+joinable!(transfers -> app_users (user_id));
 
 allow_tables_to_appear_in_same_query!(
     accounts,
     categories,
     transactions,
-    app_users
+    app_users,
+    transfers
 );

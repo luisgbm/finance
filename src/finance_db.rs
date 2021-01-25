@@ -6,7 +6,7 @@ use diesel::prelude::*;
 use diesel::result::Error;
 use dotenv::dotenv;
 
-use crate::models::{Account, AppUser, Category, CategoryTypes, NewAccount, NewAppUser, NewCategory, NewTransaction, Transaction};
+use crate::models::{Account, AppUser, Category, CategoryTypes, NewAccount, NewAppUser, NewCategory, NewTransaction, NewTransfer, Transaction, Transfer};
 
 pub struct FinanceDB {
     connection: PgConnection
@@ -48,6 +48,15 @@ impl FinanceDB {
                 app_users::password.eq(crypt(new_user.password.clone(), gen_salt("bf", bf_rounds)))
             ))
             .get_result(&self.connection)
+    }
+
+    pub fn new_transfer(&self, new_transfer: &NewTransfer) -> Transfer {
+        use crate::schema::transfers;
+
+        diesel::insert_into(transfers::table)
+            .values(new_transfer)
+            .get_result(&self.connection)
+            .expect("Error saving new transfer")
     }
 
     pub fn new_transaction(&self, new_transaction: &NewTransaction) -> Transaction {
@@ -144,6 +153,26 @@ impl FinanceDB {
             .filter(categorytype.eq(category_type))
             .load::<Category>(&self.connection)
             .expect("Error loading expense categories")
+    }
+
+    pub fn get_transfers_from_account(&self, from_account: i32, app_user_id: i32) -> Vec<Transfer> {
+        use crate::schema::transfers::dsl::*;
+
+        transfers
+            .filter(user_id.eq(app_user_id))
+            .filter(origin_account.eq(from_account))
+            .load::<Transfer>(&self.connection)
+            .expect("Error loading transfers")
+    }
+
+    pub fn get_transfers_to_account(&self, to_account: i32, app_user_id: i32) -> Vec<Transfer> {
+        use crate::schema::transfers::dsl::*;
+
+        transfers
+            .filter(user_id.eq(app_user_id))
+            .filter(destination_account.eq(to_account))
+            .load::<Transfer>(&self.connection)
+            .expect("Error loading transfers")
     }
 
     pub fn get_transaction(&self, find_id: i32, app_user_id: i32) -> Result<(Transaction, Category, Account), Error> {

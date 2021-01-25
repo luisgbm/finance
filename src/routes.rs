@@ -9,7 +9,7 @@ use rocket_contrib::json::Json;
 use crate::finance_db::FinanceDB;
 use crate::jwt;
 use crate::jwt::Claims;
-use crate::models::{Account, AccountNoUser, AccountWithBalance, Category, CategoryNoUser, CategoryTypes, NewAccount, NewAppUser, NewCategory, NewTransaction, NewTransfer, Transaction, TransactionJoined, TransactionNoAccount, TransactionNoUser, Transfer, TransferNoUser};
+use crate::models::{Account, AccountNoUser, AccountWithBalance, Category, CategoryNoUser, CategoryTypes, EditTransferNoUser, NewAccount, NewAppUser, NewCategory, NewTransaction, NewTransfer, Transaction, TransactionJoined, TransactionNoAccount, TransactionNoUser, Transfer, TransferNoUser};
 use crate::utils;
 
 #[derive(Debug)]
@@ -246,6 +246,14 @@ pub fn get_transaction_with_id(id: i32, auth: Authentication) -> Result<Json<Tra
     }
 }
 
+#[get("/transfers/<id>")]
+pub fn get_transfer_with_id(id: i32, auth: Authentication) -> Result<Json<Transfer>, Status> {
+    match FinanceDB::new().get_transfer(id, auth.token.claims.user_id) {
+        Ok(transfer) => Ok(Json(transfer)),
+        Err(_) => Err(Status::NotFound)
+    }
+}
+
 #[get("/accounts/<id>")]
 pub fn get_account_with_id(id: i32, auth: Authentication) -> Result<Json<AccountWithBalance>, Status> {
     match FinanceDB::new().get_account(id, auth.token.claims.user_id) {
@@ -267,6 +275,35 @@ pub fn get_account_with_id(id: i32, auth: Authentication) -> Result<Json<Account
 pub fn get_category_with_id(id: i32, auth: Authentication) -> Result<Json<Category>, Status> {
     match FinanceDB::new().get_category(id, auth.token.claims.user_id) {
         Ok(category) => Ok(Json(category)),
+        Err(_) => Err(Status::NotFound)
+    }
+}
+
+#[patch("/transfers/<id>", format = "json", data = "<transfer>")]
+pub fn patch_transfer(id: i32, transfer: Json<EditTransferNoUser>, auth: Authentication) -> Result<Json<Transfer>, Status> {
+    let transfer = transfer.into_inner();
+
+    match FinanceDB::new().get_account(transfer.origin_account, auth.token.claims.user_id) {
+        Ok(_) => {
+            match FinanceDB::new().get_account(transfer.destination_account, auth.token.claims.user_id) {
+                Ok(_) => {
+                    let transfer = NewTransfer {
+                        origin_account: transfer.origin_account,
+                        destination_account: transfer.destination_account,
+                        value: transfer.value,
+                        description: transfer.description,
+                        date: transfer.date,
+                        user_id: auth.token.claims.user_id,
+                    };
+
+                    match FinanceDB::new().update_transfer(id, &transfer, auth.token.claims.user_id) {
+                        Ok(obj) => Ok(Json(obj)),
+                        Err(_) => Err(Status::NotFound)
+                    }
+                }
+                Err(_) => Err(Status::NotFound)
+            }
+        }
         Err(_) => Err(Status::NotFound)
     }
 }
@@ -349,6 +386,14 @@ pub fn delete_account(id: i32, auth: Authentication) -> Result<Json<Account>, St
 pub fn delete_category(id: i32, auth: Authentication) -> Result<Json<Category>, Status> {
     match FinanceDB::new().delete_category(id, auth.token.claims.user_id) {
         Ok(category) => Ok(Json(category)),
+        Err(_) => Err(Status::NotFound)
+    }
+}
+
+#[delete("/transfers/<id>")]
+pub fn delete_transfer(id: i32, auth: Authentication) -> Result<Json<Transfer>, Status> {
+    match FinanceDB::new().delete_transfer(id, auth.token.claims.user_id) {
+        Ok(transfer) => Ok(Json(transfer)),
         Err(_) => Err(Status::NotFound)
     }
 }

@@ -64,6 +64,7 @@ joinable!(transactions -> app_users (user_id));
 joinable!(accounts -> app_users (user_id));
 joinable!(categories -> app_users (user_id));
 joinable!(transfers -> app_users (user_id));
+joinable!(transfers -> accounts (origin_account));
 
 allow_tables_to_appear_in_same_query!(
     accounts,

@@ -37,6 +37,9 @@ fn main() {
         routes::post_user,
         routes::login,
         routes::validate_token,
-        routes::post_transfer
+        routes::post_transfer,
+        routes::get_transfer_with_id,
+        routes::patch_transfer,
+        routes::delete_transfer
     ]).attach(cors).launch();
 }

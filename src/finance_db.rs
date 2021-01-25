@@ -187,6 +187,15 @@ impl FinanceDB {
             .first::<(Transaction, Category, Account)>(&self.connection)
     }
 
+    pub fn get_transfer(&self, find_id: i32, app_user_id: i32) -> Result<Transfer, Error> {
+        use crate::schema::transfers::dsl::*;
+
+        transfers
+            .filter(user_id.eq(app_user_id))
+            .filter(id.eq(find_id))
+            .first::<Transfer>(&self.connection)
+    }
+
     pub fn get_account(&self, find_id: i32, app_user_id: i32) -> Result<Account, Error> {
         use crate::schema::accounts::dsl::*;
 
@@ -214,7 +223,8 @@ impl FinanceDB {
                 description.eq(update_transaction.description),
                 date.eq(update_transaction.date),
                 account.eq(update_transaction.account),
-                category.eq(update_transaction.category)))
+                category.eq(update_transaction.category)
+            ))
             .get_result::<Transaction>(&self.connection)
     }
 
@@ -232,6 +242,20 @@ impl FinanceDB {
         diesel::update(categories.filter(user_id.eq(app_user_id)).find(update_id))
             .set((name.eq(update_category.name), categorytype.eq(update_category.categorytype)))
             .get_result::<Category>(&self.connection)
+    }
+
+    pub fn update_transfer(&self, update_id: i32, update_transfer: &NewTransfer, app_user_id: i32) -> Result<Transfer, Error> {
+        use crate::schema::transfers::dsl::*;
+
+        diesel::update(transfers.filter(user_id.eq(app_user_id)).find(update_id))
+            .set((
+                origin_account.eq(update_transfer.origin_account),
+                destination_account.eq(update_transfer.destination_account),
+                value.eq(update_transfer.value),
+                description.eq(update_transfer.description),
+                date.eq(update_transfer.date)
+            ))
+            .get_result::<Transfer>(&self.connection)
     }
 
     pub fn delete_transaction(&self, delete_id: i32, app_user_id: i32) -> Result<Transaction, Error> {
@@ -253,5 +277,12 @@ impl FinanceDB {
 
         diesel::delete(categories.filter(user_id.eq(app_user_id)).find(delete_id))
             .get_result::<Category>(&self.connection)
+    }
+
+    pub fn delete_transfer(&self, delete_id: i32, app_user_id: i32) -> Result<Transfer, Error> {
+        use crate::schema::transfers::dsl::*;
+
+        diesel::delete(transfers.filter(user_id.eq(app_user_id)).find(delete_id))
+            .get_result::<Transfer>(&self.connection)
     }
 }

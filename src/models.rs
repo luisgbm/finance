@@ -161,4 +161,11 @@ pub struct TransferNoUser<'a> {
     pub date: NaiveDateTime,
 }
 
-pub type EditTransferNoUser<'a> = TransferNoUser<'a>;
+#[derive(Serialize, Deserialize)]
+pub struct EditTransferNoUser<'a> {
+    pub origin_account: i32,
+    pub destination_account: i32,
+    pub value: i32,
+    pub description: &'a str,
+    pub date: NaiveDateTime,
+}

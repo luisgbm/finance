@@ -28,7 +28,7 @@ CREATE SEQUENCE transactions_transfers_id_seq;
 
 CREATE TABLE transactions
 (
-    id          INTEGER DEFAULT nextval("transactions_transfers_id_seq") PRIMARY KEY NOT NULL,
+    id          INTEGER DEFAULT nextval('transactions_transfers_id_seq') PRIMARY KEY NOT NULL,
     value       INTEGER                                                              NOT NULL,
     description TEXT                                                                 NOT NULL,
     date        TIMESTAMP                                                            NOT NULL,
@@ -39,7 +39,7 @@ CREATE TABLE transactions
 
 CREATE TABLE transfers
 (
-    id                  INTEGER DEFAULT nextval("transactions_transfers_id_seq") PRIMARY KEY NOT NULL,
+    id                  INTEGER DEFAULT nextval('transactions_transfers_id_seq') PRIMARY KEY NOT NULL,
     origin_account      INTEGER REFERENCES accounts (id) ON DELETE CASCADE                   NOT NULL,
     destination_account INTEGER REFERENCES accounts (id) ON DELETE CASCADE                   NOT NULL,
     value               INTEGER                                                              NOT NULL,

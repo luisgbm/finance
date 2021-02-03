@@ -197,6 +197,9 @@ pub fn get_transactions(account_id: i32, auth: Authentication) -> Result<Json<Ve
                 transactions.push(utils::create_transaction_from_transfer(transfer_to, CategoryTypes::TransferIncome));
             }
 
+            transactions.sort_by_key(|t| t.date);
+            transactions.reverse();
+
             return Ok(Json(transactions))
         }
         Err(_) => Err(Status::NotFound)

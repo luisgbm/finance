@@ -1,13 +1,16 @@
 use crate::finance_db::FinanceDB;
-use crate::models::{Account, Category, CategoryTypes, Transaction, TransactionJoined, Transfer};
+use crate::models::{Account, Category, CategoryTypes, Transaction, TransactionTransferJoined, Transfer};
 
-pub fn create_transaction_from_transfer(transfer: &Transfer, category_type: CategoryTypes) -> TransactionJoined {
+pub fn create_transaction_from_transfer(transfer: &Transfer, category_type: CategoryTypes) -> TransactionTransferJoined {
     let transfer_account_id = if category_type == CategoryTypes::Expense { transfer.origin_account } else { transfer.destination_account };
 
     let acc = FinanceDB::new().get_account(transfer_account_id, transfer.user_id)
         .expect("Error getting account information");
 
-    let transaction = TransactionJoined {
+    let from_acc = FinanceDB::new().get_account(transfer.origin_account, transfer.user_id)
+        .expect("Error getting origin account information");
+
+    let transaction = TransactionTransferJoined {
         id: transfer.id,
         value: transfer.value,
         description: transfer.description.clone(),
@@ -18,17 +21,19 @@ pub fn create_transaction_from_transfer(transfer: &Transfer, category_type: Cate
         account_id: transfer_account_id,
         account_name: acc.name,
         user_id: transfer.user_id,
+        from_account_id: Some(from_acc.id),
+        from_account_name: Some(from_acc.name),
     };
 
     transaction
 }
 
-pub fn create_transaction_join(tuple: &(Transaction, Category, Account), user_id: i32) -> TransactionJoined {
+pub fn create_transaction_join(tuple: &(Transaction, Category, Account), user_id: i32) -> TransactionTransferJoined {
     let transaction = &tuple.0;
     let category = &tuple.1;
     let account = &tuple.2;
 
-    TransactionJoined {
+    TransactionTransferJoined {
         id: transaction.id,
         value: transaction.value,
         description: transaction.description.clone(),
@@ -39,6 +44,8 @@ pub fn create_transaction_join(tuple: &(Transaction, Category, Account), user_id
         account_id: transaction.account,
         account_name: account.name.clone(),
         user_id,
+        from_account_id: None,
+        from_account_name: None,
     }
 }
 

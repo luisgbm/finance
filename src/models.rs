@@ -76,7 +76,23 @@ pub struct Transaction {
     pub user_id: i32,
 }
 
-#[derive(Queryable, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)]
+pub struct TransactionTransferJoined {
+    pub id: i32,
+    pub value: i32,
+    pub description: String,
+    pub date: NaiveDateTime,
+    pub category_id: Option<i32>,
+    pub category_type: CategoryTypes,
+    pub category_name: Option<String>,
+    pub account_id: i32,
+    pub account_name: String,
+    pub user_id: i32,
+    pub from_account_id: Option<i32>,
+    pub from_account_name: Option<String>,
+}
+
+#[derive(Serialize, Deserialize)]
 pub struct TransactionJoined {
     pub id: i32,
     pub value: i32,

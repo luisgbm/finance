@@ -9,7 +9,7 @@ use rocket_contrib::json::Json;
 use crate::finance_db::FinanceDB;
 use crate::jwt;
 use crate::jwt::Claims;
-use crate::models::{Account, AccountNoUser, AccountWithBalance, Category, CategoryNoUser, CategoryTypes, EditTransferNoUser, NewAccount, NewAppUser, NewCategory, NewTransaction, NewTransfer, Transaction, TransactionJoined, TransactionNoAccount, TransactionNoUser, Transfer, TransferNoUser};
+use crate::models::{Account, AccountNoUser, AccountWithBalance, Category, CategoryNoUser, CategoryTypes, EditTransferNoUser, NewAccount, NewAppUser, NewCategory, NewTransaction, NewTransfer, Transaction, TransactionNoAccount, TransactionNoUser, TransactionTransferJoined, Transfer, TransferNoUser};
 use crate::utils;
 
 #[derive(Debug)]
@@ -174,7 +174,7 @@ pub fn post_category(category: Json<CategoryNoUser>, auth: Authentication) -> Js
 }
 
 #[get("/transactions/account/<account_id>")]
-pub fn get_transactions(account_id: i32, auth: Authentication) -> Result<Json<Vec<TransactionJoined>>, Status> {
+pub fn get_transactions(account_id: i32, auth: Authentication) -> Result<Json<Vec<TransactionTransferJoined>>, Status> {
     match FinanceDB::new().get_account(account_id, auth.token.claims.user_id) {
         Ok(_) => {
             let mut transactions = Vec::new();
@@ -242,7 +242,7 @@ pub fn get_income_categories(auth: Authentication) -> Json<Vec<Category>> {
 }
 
 #[get("/transactions/<id>")]
-pub fn get_transaction_with_id(id: i32, auth: Authentication) -> Result<Json<TransactionJoined>, Status> {
+pub fn get_transaction_with_id(id: i32, auth: Authentication) -> Result<Json<TransactionTransferJoined>, Status> {
     match FinanceDB::new().get_transaction(id, auth.token.claims.user_id) {
         Ok(join) => Ok(Json(utils::create_transaction_join(&join, auth.token.claims.user_id))),
         Err(_) => Err(Status::NotFound)

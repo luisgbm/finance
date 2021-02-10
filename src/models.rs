@@ -37,10 +37,10 @@ pub struct ScheduledTransactionJoined {
     pub category_name: String,
     pub date: NaiveDateTime,
     pub repeat: bool,
-    pub repeat_freq: RepeatFrequencies,
-    pub repeat_interval: i32,
-    pub end_after_repeats: i32,
-    pub current_repeat_count: i32,
+    pub repeat_freq: Option<RepeatFrequencies>,
+    pub repeat_interval: Option<i32>,
+    pub end_after_repeats: Option<i32>,
+    pub current_repeat_count: Option<i32>,
     pub user_id: i32,
 }
 
@@ -53,10 +53,10 @@ pub struct ScheduledTransaction {
     pub category_id: i32,
     pub date: NaiveDateTime,
     pub repeat: bool,
-    pub repeat_freq: RepeatFrequencies,
-    pub repeat_interval: i32,
-    pub end_after_repeats: i32,
-    pub current_repeat_count: i32,
+    pub repeat_freq: Option<RepeatFrequencies>,
+    pub repeat_interval: Option<i32>,
+    pub end_after_repeats: Option<i32>,
+    pub current_repeat_count: Option<i32>,
     pub user_id: i32,
 }
 
@@ -69,10 +69,10 @@ pub struct NewScheduledTransaction<'a> {
     pub category_id: i32,
     pub date: NaiveDateTime,
     pub repeat: bool,
-    pub repeat_freq: RepeatFrequencies,
-    pub repeat_interval: i32,
-    pub end_after_repeats: i32,
-    pub current_repeat_count: i32,
+    pub repeat_freq: Option<RepeatFrequencies>,
+    pub repeat_interval: Option<i32>,
+    pub end_after_repeats: Option<i32>,
+    pub current_repeat_count: Option<i32>,
     pub user_id: i32,
 }
 
@@ -84,10 +84,10 @@ pub struct ScheduledTransactionNoUser<'a> {
     pub category_id: i32,
     pub date: NaiveDateTime,
     pub repeat: bool,
-    pub repeat_freq: RepeatFrequencies,
-    pub repeat_interval: i32,
-    pub end_after_repeats: i32,
-    pub current_repeat_count: i32,
+    pub repeat_freq: Option<RepeatFrequencies>,
+    pub repeat_interval: Option<i32>,
+    pub end_after_repeats: Option<i32>,
+    pub current_repeat_count: Option<i32>,
 }
 
 #[derive(Queryable, Serialize, Deserialize)]

@@ -60,7 +60,7 @@ table! {
 
 table! {
     use crate::models::RepeatFrequenciesMapping;
-    use diesel::sql_types::{Integer, Text, Timestamp, Bool};
+    use diesel::sql_types::{Integer, Text, Timestamp, Bool, Nullable};
 
     scheduled_transactions (id) {
         id -> Integer,
@@ -70,10 +70,10 @@ table! {
         category_id -> Integer,
         date -> Timestamp,
         repeat -> Bool,
-        repeat_freq -> RepeatFrequenciesMapping,
-        repeat_interval -> Integer,
-        end_after_repeats -> Integer,
-        current_repeat_count -> Integer,
+        repeat_freq -> Nullable<RepeatFrequenciesMapping>,
+        repeat_interval -> Nullable<Integer>,
+        end_after_repeats -> Nullable<Integer>,
+        current_repeat_count -> Nullable<Integer>,
         user_id -> Integer,
     }
 }

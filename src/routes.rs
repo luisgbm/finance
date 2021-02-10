@@ -127,11 +127,25 @@ pub fn post_transfer(origin_account: i32, destination_account: i32, new_transfer
 }
 
 #[post("/scheduled-transactions", format = "json", data = "<scheduled_transaction>")]
-pub fn post_scheduled_transaction(scheduled_transaction: Json<NewScheduledTransaction>, auth: Authentication) -> Result<Json<ScheduledTransaction>, Status> {
+pub fn post_scheduled_transaction(scheduled_transaction: Json<ScheduledTransactionNoUser>, auth: Authentication) -> Result<Json<ScheduledTransaction>, Status> {
     match FinanceDB::new().get_account(scheduled_transaction.account_id, auth.token.claims.user_id) {
         Ok(_) => {
             match FinanceDB::new().get_category(scheduled_transaction.category_id, auth.token.claims.user_id) {
                 Ok(_) => {
+                    let scheduled_transaction = NewScheduledTransaction {
+                        account_id: scheduled_transaction.account_id,
+                        value: scheduled_transaction.value,
+                        description: scheduled_transaction.description.clone(),
+                        category_id: scheduled_transaction.category_id,
+                        date: scheduled_transaction.date.clone(),
+                        repeat: scheduled_transaction.repeat,
+                        repeat_freq: scheduled_transaction.repeat_freq,
+                        repeat_interval: scheduled_transaction.repeat_interval,
+                        end_after_repeats: scheduled_transaction.end_after_repeats,
+                        current_repeat_count: scheduled_transaction.current_repeat_count,
+                        user_id: auth.token.claims.user_id,
+                    };
+
                     return Ok(Json(FinanceDB::new().new_scheduled_transaction(&scheduled_transaction)))
                 }
                 Err(_) => Err(Status::NotFound)

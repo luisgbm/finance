@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::schema::accounts;
 use crate::schema::app_users;
 use crate::schema::categories;
+use crate::schema::scheduled_transactions;
 use crate::schema::transactions;
 use crate::schema::transfers;
 
@@ -22,6 +23,38 @@ pub enum RepeatFrequencies {
     Weeks,
     Months,
     Years,
+}
+
+#[derive(Queryable, Serialize, Deserialize)]
+pub struct ScheduledTransaction {
+    pub id: i32,
+    pub account_id: i32,
+    pub value: i32,
+    pub description: String,
+    pub category_id: i32,
+    pub date: NaiveDateTime,
+    pub repeat: bool,
+    pub repeat_freq: RepeatFrequencies,
+    pub repeat_interval: i32,
+    pub end_after_repeats: i32,
+    pub current_repeat_count: i32,
+    pub user_id: i32,
+}
+
+#[derive(Insertable, Serialize, Deserialize)]
+#[table_name = "scheduled_transactions"]
+pub struct NewScheduledTransaction<'a> {
+    pub account_id: i32,
+    pub value: i32,
+    pub description: &'a str,
+    pub category_id: i32,
+    pub date: NaiveDateTime,
+    pub repeat: bool,
+    pub repeat_freq: RepeatFrequencies,
+    pub repeat_interval: i32,
+    pub end_after_repeats: i32,
+    pub current_repeat_count: i32,
+    pub user_id: i32,
 }
 
 #[derive(Queryable, Serialize, Deserialize)]

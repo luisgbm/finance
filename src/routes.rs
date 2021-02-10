@@ -9,7 +9,7 @@ use rocket_contrib::json::Json;
 use crate::finance_db::FinanceDB;
 use crate::jwt;
 use crate::jwt::Claims;
-use crate::models::{Account, AccountNoUser, AccountWithBalance, Category, CategoryNoUser, CategoryTypes, EditTransferNoUser, NewAccount, NewAppUser, NewCategory, NewTransaction, NewTransfer, Transaction, TransactionNoAccount, TransactionNoUser, TransactionTransferJoined, Transfer, TransferNoUser};
+use crate::models::{Account, AccountNoUser, AccountWithBalance, Category, CategoryNoUser, CategoryTypes, EditTransferNoUser, NewAccount, NewAppUser, NewCategory, NewScheduledTransaction, NewTransaction, NewTransfer, ScheduledTransaction, ScheduledTransactionJoined, ScheduledTransactionNoUser, Transaction, TransactionNoAccount, TransactionNoUser, TransactionTransferJoined, Transfer, TransferNoUser};
 use crate::utils;
 
 #[derive(Debug)]
@@ -126,6 +126,21 @@ pub fn post_transfer(origin_account: i32, destination_account: i32, new_transfer
     }
 }
 
+#[post("/scheduled-transactions", format = "json", data = "<scheduled_transaction>")]
+pub fn post_scheduled_transaction(scheduled_transaction: Json<NewScheduledTransaction>, auth: Authentication) -> Result<Json<ScheduledTransaction>, Status> {
+    match FinanceDB::new().get_account(scheduled_transaction.account_id, auth.token.claims.user_id) {
+        Ok(_) => {
+            match FinanceDB::new().get_category(scheduled_transaction.category_id, auth.token.claims.user_id) {
+                Ok(_) => {
+                    return Ok(Json(FinanceDB::new().new_scheduled_transaction(&scheduled_transaction)))
+                }
+                Err(_) => Err(Status::NotFound)
+            }
+        }
+        Err(_) => Err(Status::NotFound)
+    }
+}
+
 #[post("/transactions/account/<account_id>", format = "json", data = "<transaction>")]
 pub fn post_transaction(account_id: i32, transaction: Json<TransactionNoAccount>, auth: Authentication) -> Result<Json<Transaction>, Status> {
     match FinanceDB::new().get_account(account_id, auth.token.claims.user_id) {
@@ -171,6 +186,22 @@ pub fn post_category(category: Json<CategoryNoUser>, auth: Authentication) -> Js
     };
 
     Json(FinanceDB::new().new_category(&new_category))
+}
+
+#[get("/scheduled-transactions")]
+pub fn get_scheduled_transactions(auth: Authentication) -> Result<Json<Vec<ScheduledTransactionJoined>>, Status> {
+    match FinanceDB::new().get_all_scheduled_transactions(auth.token.claims.user_id) {
+        Ok(scheduled_transactions_tuples) => {
+            let mut scheduled_transactions = Vec::new();
+
+            for scheduled_transaction_tuple in &scheduled_transactions_tuples {
+                scheduled_transactions.push(utils::create_scheduled_transaction_join(scheduled_transaction_tuple));
+            }
+
+            return Ok(Json(scheduled_transactions))
+        }
+        Err(_) => Err(Status::NotFound)
+    }
 }
 
 #[get("/transactions/account/<account_id>")]
@@ -241,6 +272,14 @@ pub fn get_income_categories(auth: Authentication) -> Json<Vec<Category>> {
     Json(FinanceDB::new().get_all_categories_by_type(CategoryTypes::Income, auth.token.claims.user_id))
 }
 
+#[get("/scheduled-transactions/<id>")]
+pub fn get_scheduled_transaction_with_id(id: i32, auth: Authentication) -> Result<Json<ScheduledTransactionJoined>, Status> {
+    match FinanceDB::new().get_scheduled_transaction(id, auth.token.claims.user_id) {
+        Ok(tuple) => Ok(Json(utils::create_scheduled_transaction_join(&tuple))),
+        Err(_) => Err(Status::NotFound)
+    }
+}
+
 #[get("/transactions/<id>")]
 pub fn get_transaction_with_id(id: i32, auth: Authentication) -> Result<Json<TransactionTransferJoined>, Status> {
     match FinanceDB::new().get_transaction(id, auth.token.claims.user_id) {
@@ -301,6 +340,38 @@ pub fn patch_transfer(id: i32, transfer: Json<EditTransferNoUser>, auth: Authent
 
                     match FinanceDB::new().update_transfer(id, &transfer, auth.token.claims.user_id) {
                         Ok(obj) => Ok(Json(obj)),
+                        Err(_) => Err(Status::NotFound)
+                    }
+                }
+                Err(_) => Err(Status::NotFound)
+            }
+        }
+        Err(_) => Err(Status::NotFound)
+    }
+}
+
+#[patch("/scheduled-transactions/<id>", format = "json", data = "<scheduled_transaction>")]
+pub fn patch_scheduled_transaction(id: i32, scheduled_transaction: Json<ScheduledTransactionNoUser>, auth: Authentication) -> Result<Json<ScheduledTransaction>, Status> {
+    match FinanceDB::new().get_account(scheduled_transaction.account_id, auth.token.claims.user_id) {
+        Ok(_) => {
+            match FinanceDB::new().get_category(scheduled_transaction.category_id, auth.token.claims.user_id) {
+                Ok(_) => {
+                    let scheduled_transaction = NewScheduledTransaction {
+                        account_id: scheduled_transaction.account_id,
+                        value: scheduled_transaction.value,
+                        description: scheduled_transaction.description.clone(),
+                        category_id: scheduled_transaction.category_id,
+                        date: scheduled_transaction.date.clone(),
+                        repeat: scheduled_transaction.repeat,
+                        repeat_freq: scheduled_transaction.repeat_freq,
+                        repeat_interval: scheduled_transaction.repeat_interval,
+                        end_after_repeats: scheduled_transaction.end_after_repeats,
+                        current_repeat_count: scheduled_transaction.current_repeat_count,
+                        user_id: auth.token.claims.user_id,
+                    };
+
+                    match FinanceDB::new().update_scheduled_transaction(id, &scheduled_transaction, auth.token.claims.user_id) {
+                        Ok(scheduled_transaction) => Ok(Json(scheduled_transaction)),
                         Err(_) => Err(Status::NotFound)
                     }
                 }
@@ -397,6 +468,14 @@ pub fn delete_category(id: i32, auth: Authentication) -> Result<Json<Category>, 
 pub fn delete_transfer(id: i32, auth: Authentication) -> Result<Json<Transfer>, Status> {
     match FinanceDB::new().delete_transfer(id, auth.token.claims.user_id) {
         Ok(transfer) => Ok(Json(transfer)),
+        Err(_) => Err(Status::NotFound)
+    }
+}
+
+#[delete("/scheduled-transactions/<id>")]
+pub fn delete_scheduled_transaction(id: i32, auth: Authentication) -> Result<Json<ScheduledTransaction>, Status> {
+    match FinanceDB::new().delete_scheduled_transaction(id, auth.token.claims.user_id) {
+        Ok(scheduled_transaction) => Ok(Json(scheduled_transaction)),
         Err(_) => Err(Status::NotFound)
     }
 }

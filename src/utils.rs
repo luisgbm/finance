@@ -1,5 +1,5 @@
 use crate::finance_db::FinanceDB;
-use crate::models::{Account, Category, CategoryTypes, Transaction, TransactionTransferJoined, Transfer};
+use crate::models::{Account, AppUser, Category, CategoryTypes, ScheduledTransaction, ScheduledTransactionJoined, Transaction, TransactionTransferJoined, Transfer};
 
 pub fn create_transaction_from_transfer(transfer: &Transfer, category_type: CategoryTypes) -> TransactionTransferJoined {
     let transfer_account_id = if category_type == CategoryTypes::Expense { transfer.origin_account } else { transfer.destination_account };
@@ -26,6 +26,31 @@ pub fn create_transaction_from_transfer(transfer: &Transfer, category_type: Cate
     };
 
     transaction
+}
+
+pub fn create_scheduled_transaction_join(tuple: &(ScheduledTransaction, Category, Account, AppUser)) -> ScheduledTransactionJoined {
+    let scheduled_transaction = &tuple.0;
+    let category = &tuple.1;
+    let account = &tuple.2;
+    let app_user = &tuple.3;
+
+    ScheduledTransactionJoined {
+        id: scheduled_transaction.id,
+        account_id: account.id,
+        account_name: account.name.clone(),
+        value: scheduled_transaction.value,
+        description: scheduled_transaction.description.clone(),
+        category_id: category.id,
+        category_type: category.categorytype,
+        category_name: category.name.clone(),
+        date: scheduled_transaction.date.clone(),
+        repeat: scheduled_transaction.repeat,
+        repeat_freq: scheduled_transaction.repeat_freq,
+        repeat_interval: scheduled_transaction.repeat_interval,
+        end_after_repeats: scheduled_transaction.end_after_repeats,
+        current_repeat_count: scheduled_transaction.current_repeat_count,
+        user_id: app_user.id,
+    }
 }
 
 pub fn create_transaction_join(tuple: &(Transaction, Category, Account), user_id: i32) -> TransactionTransferJoined {

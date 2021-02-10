@@ -40,6 +40,11 @@ fn main() {
         routes::post_transfer,
         routes::get_transfer_with_id,
         routes::patch_transfer,
-        routes::delete_transfer
+        routes::delete_transfer,
+        routes::post_scheduled_transaction,
+        routes::get_scheduled_transactions,
+        routes::get_scheduled_transaction_with_id,
+        routes::patch_scheduled_transaction,
+        routes::delete_scheduled_transaction
     ]).attach(cors).launch();
 }

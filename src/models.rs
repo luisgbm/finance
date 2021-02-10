@@ -25,6 +25,25 @@ pub enum RepeatFrequencies {
     Years,
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct ScheduledTransactionJoined {
+    pub id: i32,
+    pub account_id: i32,
+    pub account_name: String,
+    pub value: i32,
+    pub description: String,
+    pub category_id: i32,
+    pub category_type: CategoryTypes,
+    pub category_name: String,
+    pub date: NaiveDateTime,
+    pub repeat: bool,
+    pub repeat_freq: RepeatFrequencies,
+    pub repeat_interval: i32,
+    pub end_after_repeats: i32,
+    pub current_repeat_count: i32,
+    pub user_id: i32,
+}
+
 #[derive(Queryable, Serialize, Deserialize)]
 pub struct ScheduledTransaction {
     pub id: i32,
@@ -55,6 +74,20 @@ pub struct NewScheduledTransaction<'a> {
     pub end_after_repeats: i32,
     pub current_repeat_count: i32,
     pub user_id: i32,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct ScheduledTransactionNoUser<'a> {
+    pub account_id: i32,
+    pub value: i32,
+    pub description: &'a str,
+    pub category_id: i32,
+    pub date: NaiveDateTime,
+    pub repeat: bool,
+    pub repeat_freq: RepeatFrequencies,
+    pub repeat_interval: i32,
+    pub end_after_repeats: i32,
+    pub current_repeat_count: i32,
 }
 
 #[derive(Queryable, Serialize, Deserialize)]

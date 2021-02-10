@@ -47,3 +47,21 @@ CREATE TABLE transfers
     date                TIMESTAMP                                                            NOT NULL,
     user_id             INTEGER REFERENCES app_users (id) ON DELETE CASCADE                  NOT NULL
 );
+
+CREATE TYPE repeat_frequencies AS ENUM ('days', 'weeks', 'months', 'years');
+
+CREATE TABLE scheduled_transactions
+(
+    id                   INTEGER DEFAULT nextval('transactions_transfers_id_seq') PRIMARY KEY NOT NULL,
+    account_id           INTEGER REFERENCES accounts (id) ON DELETE CASCADE                   NOT NULL,
+    value                INTEGER                                                              NOT NULL,
+    description          TEXT                                                                 NOT NULL,
+    category_id          INTEGER REFERENCES categories (id) ON DELETE CASCADE                 NOT NULL,
+    date                 TIMESTAMP                                                            NOT NULL,
+    repeat               BOOLEAN                                                              NOT NULL,
+    repeat_freq          repeat_frequencies,
+    repeat_interval      INTEGER,
+    end_after_repeats    INTEGER,
+    current_repeat_count INTEGER,
+    user_id              INTEGER REFERENCES app_users (id) ON DELETE CASCADE                  NOT NULL
+);

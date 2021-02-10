@@ -16,6 +16,14 @@ pub enum CategoryTypes {
     TransferExpense,
 }
 
+#[derive(DbEnum, Debug, Serialize, Deserialize, Copy, Clone, PartialEq)]
+pub enum RepeatFrequencies {
+    Days,
+    Weeks,
+    Months,
+    Years,
+}
+
 #[derive(Queryable, Serialize, Deserialize)]
 pub struct CategoryNoUser {
     pub categorytype: CategoryTypes,

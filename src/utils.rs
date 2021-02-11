@@ -1,13 +1,78 @@
-use crate::finance_db::FinanceDB;
-use crate::models::{Account, AppUser, Category, CategoryTypes, ScheduledTransaction, ScheduledTransactionJoined, Transaction, TransactionTransferJoined, Transfer};
+use chrono::{Datelike, Duration, NaiveDate, NaiveDateTime};
+
+use crate::db_accounts::DatabaseAccounts;
+use crate::db_transactions::DatabaseTransactions;
+use crate::db_transfers::DatabaseTransfers;
+use crate::models_db::{Account, AppUser, Category, CategoryTypes, ScheduledTransaction, Transaction, Transfer};
+use crate::models_routes::{GetScheduledTransaction, TransactionTransferJoined};
+
+pub fn get_days_from_month(year: i32, month: u32) -> i64 {
+    NaiveDate::from_ymd(
+        match month {
+            12 => year + 1,
+            _ => year,
+        },
+        match month {
+            12 => 1,
+            _ => month + 1,
+        },
+        1,
+    )
+        .signed_duration_since(NaiveDate::from_ymd(year, month, 1))
+        .num_days()
+}
+
+pub fn add_days_to_naive_date_time(days: i32, naive: &NaiveDateTime) -> NaiveDateTime {
+    naive.clone() + Duration::days(days as i64)
+}
+
+pub fn add_years_to_naive_date_time(years: i32, naive: &NaiveDateTime) -> NaiveDateTime {
+    let mut new_date = naive.clone();
+
+    for _i in 0..years {
+        for _j in 0..12 {
+            new_date = add_one_month_to_naive_date_time(&new_date);
+        }
+    }
+
+    new_date
+}
+
+pub fn add_months_to_naive_date_time(months: i32, naive: &NaiveDateTime) -> NaiveDateTime {
+    let mut new_date = naive.clone();
+
+    for _i in 0..months {
+        new_date = add_one_month_to_naive_date_time(&new_date);
+    }
+
+    new_date
+}
+
+pub fn add_one_month_to_naive_date_time(naive: &NaiveDateTime) -> NaiveDateTime {
+    let y = naive.date().year();
+    let m = naive.date().month();
+
+    let days_to_add = get_days_from_month(
+        match y {
+            12 => y + 1,
+            _ => y
+        },
+        match m {
+            12 => 1,
+            _ => m + 1,
+        },
+    );
+
+    add_days_to_naive_date_time(days_to_add as i32, naive)
+}
 
 pub fn create_transaction_from_transfer(transfer: &Transfer, category_type: CategoryTypes) -> TransactionTransferJoined {
     let transfer_account_id = if category_type == CategoryTypes::Expense { transfer.origin_account } else { transfer.destination_account };
 
-    let acc = FinanceDB::new().get_account(transfer_account_id, transfer.user_id)
+    let acc = DatabaseAccounts::new().get_account(transfer_account_id, transfer.user_id)
         .expect("Error getting account information");
 
-    let from_acc = FinanceDB::new().get_account(transfer.origin_account, transfer.user_id)
+    let from_acc = DatabaseAccounts::new().get_account(transfer.origin_account, transfer.user_id)
         .expect("Error getting origin account information");
 
     let transaction = TransactionTransferJoined {
@@ -28,13 +93,13 @@ pub fn create_transaction_from_transfer(transfer: &Transfer, category_type: Cate
     transaction
 }
 
-pub fn create_scheduled_transaction_join(tuple: &(ScheduledTransaction, Category, Account, AppUser)) -> ScheduledTransactionJoined {
+pub fn create_scheduled_transaction_join(tuple: &(ScheduledTransaction, Category, Account, AppUser)) -> GetScheduledTransaction {
     let scheduled_transaction = &tuple.0;
     let category = &tuple.1;
     let account = &tuple.2;
     let app_user = &tuple.3;
 
-    ScheduledTransactionJoined {
+    GetScheduledTransaction {
         id: scheduled_transaction.id,
         account_id: account.id,
         account_name: account.name.clone(),
@@ -43,12 +108,13 @@ pub fn create_scheduled_transaction_join(tuple: &(ScheduledTransaction, Category
         category_id: category.id,
         category_type: category.categorytype,
         category_name: category.name.clone(),
-        date: scheduled_transaction.date.clone(),
+        created_date: scheduled_transaction.created_date.clone(),
         repeat: scheduled_transaction.repeat,
         repeat_freq: scheduled_transaction.repeat_freq,
         repeat_interval: scheduled_transaction.repeat_interval,
         end_after_repeats: scheduled_transaction.end_after_repeats,
         current_repeat_count: scheduled_transaction.current_repeat_count,
+        next_date: scheduled_transaction.next_date.clone(),
         user_id: app_user.id,
     }
 }
@@ -77,7 +143,7 @@ pub fn create_transaction_join(tuple: &(Transaction, Category, Account), user_id
 pub fn get_account_balance(account_id: i32, user_id: i32) -> i32 {
     let mut balance: i32 = 0;
 
-    let transactions = FinanceDB::new().get_all_transactions_of_account_joined(account_id, user_id);
+    let transactions = DatabaseTransactions::new().get_all_transactions_of_account_joined(account_id, user_id);
 
     for transaction_tuple in &transactions {
         let transaction = &transaction_tuple.0;
@@ -90,13 +156,13 @@ pub fn get_account_balance(account_id: i32, user_id: i32) -> i32 {
         }
     }
 
-    let transfers_from = FinanceDB::new().get_transfers_from_account(account_id, user_id);
+    let transfers_from = DatabaseTransfers::new().get_transfers_from_account(account_id, user_id);
 
     for transfer_from in &transfers_from {
         balance -= transfer_from.value;
     }
 
-    let transfers_to = FinanceDB::new().get_transfers_to_account(account_id, user_id);
+    let transfers_to = DatabaseTransfers::new().get_transfers_to_account(account_id, user_id);
 
     for transfer_to in &transfers_to {
         balance += transfer_to.value;

@@ -44,7 +44,7 @@ mod jwt_numeric_date {
     {
         Utc.timestamp_opt(i64::deserialize(deserializer)?, 0)
             .single()
-            .ok_or_else(|| serde::de::Error::custom("invalid Unix timestamp value"))
+            .ok_or_else(|| serde::de::Error::custom("Invalid UNIX timestamp value"))
     }
 }
 

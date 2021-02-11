@@ -25,25 +25,6 @@ pub enum RepeatFrequencies {
     Years,
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct ScheduledTransactionJoined {
-    pub id: i32,
-    pub account_id: i32,
-    pub account_name: String,
-    pub value: i32,
-    pub description: String,
-    pub category_id: i32,
-    pub category_type: CategoryTypes,
-    pub category_name: String,
-    pub date: NaiveDateTime,
-    pub repeat: bool,
-    pub repeat_freq: Option<RepeatFrequencies>,
-    pub repeat_interval: Option<i32>,
-    pub end_after_repeats: Option<i32>,
-    pub current_repeat_count: Option<i32>,
-    pub user_id: i32,
-}
-
 #[derive(Queryable, Serialize, Deserialize)]
 pub struct ScheduledTransaction {
     pub id: i32,
@@ -51,12 +32,13 @@ pub struct ScheduledTransaction {
     pub value: i32,
     pub description: String,
     pub category_id: i32,
-    pub date: NaiveDateTime,
+    pub created_date: NaiveDateTime,
     pub repeat: bool,
     pub repeat_freq: Option<RepeatFrequencies>,
     pub repeat_interval: Option<i32>,
     pub end_after_repeats: Option<i32>,
     pub current_repeat_count: Option<i32>,
+    pub next_date: Option<NaiveDateTime>,
     pub user_id: i32,
 }
 
@@ -67,33 +49,14 @@ pub struct NewScheduledTransaction<'a> {
     pub value: i32,
     pub description: &'a str,
     pub category_id: i32,
-    pub date: NaiveDateTime,
+    pub created_date: NaiveDateTime,
     pub repeat: bool,
     pub repeat_freq: Option<RepeatFrequencies>,
     pub repeat_interval: Option<i32>,
     pub end_after_repeats: Option<i32>,
     pub current_repeat_count: Option<i32>,
+    pub next_date: Option<NaiveDateTime>,
     pub user_id: i32,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct ScheduledTransactionNoUser<'a> {
-    pub account_id: i32,
-    pub value: i32,
-    pub description: &'a str,
-    pub category_id: i32,
-    pub date: NaiveDateTime,
-    pub repeat: bool,
-    pub repeat_freq: Option<RepeatFrequencies>,
-    pub repeat_interval: Option<i32>,
-    pub end_after_repeats: Option<i32>,
-    pub current_repeat_count: Option<i32>,
-}
-
-#[derive(Queryable, Serialize, Deserialize)]
-pub struct CategoryNoUser {
-    pub categorytype: CategoryTypes,
-    pub name: String,
 }
 
 #[derive(Queryable, Serialize, Deserialize)]
@@ -109,21 +72,13 @@ pub struct Category {
 pub struct NewCategory<'a> {
     pub categorytype: CategoryTypes,
     pub name: &'a str,
-    pub user_id: i32
+    pub user_id: i32,
 }
 
 #[derive(Queryable, Serialize, Deserialize)]
 pub struct Account {
     pub id: i32,
     pub name: String,
-    pub user_id: i32
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct AccountWithBalance {
-    pub id: i32,
-    pub name: String,
-    pub balance: i32,
     pub user_id: i32,
 }
 
@@ -132,11 +87,6 @@ pub struct AccountWithBalance {
 pub struct NewAccount<'a> {
     pub name: &'a str,
     pub user_id: i32,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct AccountNoUser<'a> {
-    pub name: &'a str
 }
 
 #[derive(Queryable, Serialize, Deserialize)]
@@ -150,45 +100,6 @@ pub struct Transaction {
     pub user_id: i32,
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct TransactionTransferJoined {
-    pub id: i32,
-    pub value: i32,
-    pub description: String,
-    pub date: NaiveDateTime,
-    pub category_id: Option<i32>,
-    pub category_type: CategoryTypes,
-    pub category_name: Option<String>,
-    pub account_id: i32,
-    pub account_name: String,
-    pub user_id: i32,
-    pub from_account_id: Option<i32>,
-    pub from_account_name: Option<String>,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct TransactionJoined {
-    pub id: i32,
-    pub value: i32,
-    pub description: String,
-    pub date: NaiveDateTime,
-    pub category_id: Option<i32>,
-    pub category_type: CategoryTypes,
-    pub category_name: Option<String>,
-    pub account_id: i32,
-    pub account_name: String,
-    pub user_id: i32,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct TransactionNoUser<'a> {
-    pub value: i32,
-    pub description: &'a str,
-    pub date: NaiveDateTime,
-    pub account: i32,
-    pub category: i32,
-}
-
 #[derive(Insertable, Serialize, Deserialize)]
 #[table_name = "transactions"]
 pub struct NewTransaction<'a> {
@@ -198,14 +109,6 @@ pub struct NewTransaction<'a> {
     pub account: i32,
     pub category: i32,
     pub user_id: i32,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct TransactionNoAccount {
-    pub value: i32,
-    pub description: String,
-    pub date: NaiveDateTime,
-    pub category: i32
 }
 
 #[derive(Queryable, Serialize, Deserialize)]
@@ -242,20 +145,4 @@ pub struct NewTransfer<'a> {
     pub description: &'a str,
     pub date: NaiveDateTime,
     pub user_id: i32,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct TransferNoUser<'a> {
-    pub value: i32,
-    pub description: &'a str,
-    pub date: NaiveDateTime,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct EditTransferNoUser<'a> {
-    pub origin_account: i32,
-    pub destination_account: i32,
-    pub value: i32,
-    pub description: &'a str,
-    pub date: NaiveDateTime,
 }

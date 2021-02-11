@@ -6,45 +6,37 @@ extern crate dotenv;
 #[macro_use]
 extern crate rocket;
 
-pub mod models;
+pub mod models_routes;
+pub mod models_db;
 pub mod schema;
-pub mod finance_db;
+pub mod db_finance;
 pub mod utils;
-pub mod routes;
+pub mod routes_scheduled_transactions;
+pub mod routes_categories;
+pub mod routes_accounts;
+pub mod routes_auth;
+pub mod routes_transactions;
+pub mod routes_transfers;
 pub mod jwt;
+pub mod auth_guard;
+pub mod db_accounts;
+pub mod db_categories;
+pub mod db_transactions;
+pub mod db_transfers;
+pub mod db_auth;
+pub mod db_scheduled_transactions;
 
 fn main() {
     let cors = rocket_cors::CorsOptions::default().to_cors().unwrap();
 
-    rocket::ignite().mount("/", routes![
-        routes::post_category,
-        routes::get_categories,
-        routes::get_expense_categories,
-        routes::get_income_categories,
-        routes::get_category_with_id,
-        routes::patch_category,
-        routes::delete_category,
-        routes::post_account,
-        routes::get_accounts,
-        routes::get_account_with_id,
-        routes::patch_account,
-        routes::delete_account,
-        routes::post_transaction,
-        routes::get_transactions,
-        routes::get_transaction_with_id,
-        routes::patch_transaction,
-        routes::delete_transaction,
-        routes::post_user,
-        routes::login,
-        routes::validate_token,
-        routes::post_transfer,
-        routes::get_transfer_with_id,
-        routes::patch_transfer,
-        routes::delete_transfer,
-        routes::post_scheduled_transaction,
-        routes::get_scheduled_transactions,
-        routes::get_scheduled_transaction_with_id,
-        routes::patch_scheduled_transaction,
-        routes::delete_scheduled_transaction
-    ]).attach(cors).launch();
+    let mut all_routes = Vec::new();
+
+    all_routes.append(&mut routes_categories::get_routes());
+    all_routes.append(&mut routes_accounts::get_routes());
+    all_routes.append(&mut routes_auth::get_routes());
+    all_routes.append(&mut routes_transactions::get_routes());
+    all_routes.append(&mut routes_transfers::get_routes());
+    all_routes.append(&mut routes_scheduled_transactions::get_routes());
+
+    rocket::ignite().mount("/", all_routes).attach(cors).launch();
 }

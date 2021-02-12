@@ -40,6 +40,15 @@ pub struct PostScheduledTransaction {
 
 pub type PatchScheduledTransaction = PostScheduledTransaction;
 
+#[derive(Serialize, Deserialize)]
+pub struct PostScheduledTransactionPay {
+    pub value: i32,
+    pub description: String,
+    pub date: NaiveDateTime,
+    pub category: i32,
+    pub account: i32,
+}
+
 #[derive(Queryable, Serialize, Deserialize)]
 pub struct PostCategory {
     pub categorytype: CategoryTypes,

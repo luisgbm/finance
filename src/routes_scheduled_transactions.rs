@@ -1,4 +1,5 @@
 use chrono::{Duration, NaiveDateTime};
+use chronoutil::RelativeDuration;
 use rocket;
 use rocket::http::Status;
 use rocket::Route;
@@ -13,31 +14,29 @@ use crate::models_db::{NewScheduledTransaction, NewTransaction, RepeatFrequencie
 use crate::models_routes::{GetScheduledTransaction, PatchScheduledTransaction, PostScheduledTransaction, PostScheduledTransactionPay};
 use crate::utils;
 
-fn internal_calculate_next_date(old_date: Option<NaiveDateTime>, repeat: bool, repeat_freq: Option<RepeatFrequencies>, repeat_interval: Option<i32>) -> NaiveDateTime {
-    let mut new_date = old_date.unwrap().clone();
-
+fn internal_calculate_next_date(initial_date: NaiveDateTime, repeat: bool, repeat_freq: RepeatFrequencies, repeat_interval: i32, current_repeat_count: i32) -> NaiveDateTime {
     if repeat == true {
-        match repeat_freq.unwrap() {
+        match repeat_freq {
             RepeatFrequencies::Days => {
-                new_date = new_date + Duration::days((repeat_interval.unwrap() as i64) * 1);
+                initial_date + RelativeDuration::days((current_repeat_count * repeat_interval) as i64)
             }
             RepeatFrequencies::Weeks => {
-                new_date = new_date + Duration::days((repeat_interval.unwrap() as i64) * 7);
+                initial_date + Duration::weeks((current_repeat_count * repeat_interval) as i64)
             }
             RepeatFrequencies::Months => {
-                new_date = utils::add_months_to_naive_date_time(repeat_interval.unwrap(), &new_date);
+                initial_date + RelativeDuration::months(current_repeat_count * repeat_interval)
             }
             RepeatFrequencies::Years => {
-                new_date = utils::add_years_to_naive_date_time(repeat_interval.unwrap(), &new_date);
+                initial_date + RelativeDuration::years(current_repeat_count * repeat_interval)
             }
         }
+    } else {
+        initial_date
     }
-
-    new_date
 }
 
 #[post("/scheduled-transactions/<scheduled_transaction_id>/pay", format = "json", data = "<transaction>")]
-pub fn post_scheduled_transaction_pay(scheduled_transaction_id: i32, transaction: Json<PostScheduledTransactionPay>, auth: Authentication) -> Result<Json<(ScheduledTransaction, Transaction)>, Status> {
+pub fn post_scheduled_transaction_pay(scheduled_transaction_id: i32, transaction: Json<PostScheduledTransactionPay>, auth: Authentication) -> Result<Json<Transaction>, Status> {
     match DatabaseScheduledTransactions::new().get_scheduled_transaction(scheduled_transaction_id, auth.token.claims.user_id) {
         Ok(scheduled_transaction_tuple) => {
             let new_transaction = NewTransaction {
@@ -54,21 +53,22 @@ pub fn post_scheduled_transaction_pay(scheduled_transaction_id: i32, transaction
             let scheduled_transaction = scheduled_transaction_tuple.0;
 
             if scheduled_transaction.repeat == false {
-                let deleted_scheduled_transaction = DatabaseScheduledTransactions::new().delete_scheduled_transaction(scheduled_transaction_id, auth.token.claims.user_id).unwrap();
-                return Ok(Json((deleted_scheduled_transaction, new_transaction)));
+                DatabaseScheduledTransactions::new().delete_scheduled_transaction(scheduled_transaction_id, auth.token.claims.user_id).unwrap();
+                return Ok(Json(new_transaction));
             } else {
                 let new_repeat_count = scheduled_transaction.current_repeat_count.unwrap() + 1;
 
                 if new_repeat_count >= scheduled_transaction.end_after_repeats.unwrap() {
-                    let deleted_scheduled_transaction = DatabaseScheduledTransactions::new().delete_scheduled_transaction(scheduled_transaction_id, auth.token.claims.user_id).unwrap();
-                    return Ok(Json((deleted_scheduled_transaction, new_transaction)));
+                    DatabaseScheduledTransactions::new().delete_scheduled_transaction(scheduled_transaction_id, auth.token.claims.user_id).unwrap();
+                    return Ok(Json(new_transaction));
                 }
 
                 let new_date = internal_calculate_next_date(
-                    scheduled_transaction.next_date,
+                    scheduled_transaction.created_date,
                     scheduled_transaction.repeat,
-                    scheduled_transaction.repeat_freq,
-                    scheduled_transaction.repeat_interval,
+                    scheduled_transaction.repeat_freq.unwrap(),
+                    scheduled_transaction.repeat_interval.unwrap(),
+                    new_repeat_count,
                 );
 
                 let scheduled_transaction_paid = NewScheduledTransaction {
@@ -86,9 +86,10 @@ pub fn post_scheduled_transaction_pay(scheduled_transaction_id: i32, transaction
                     user_id: auth.token.claims.user_id,
                 };
 
-                let scheduled_transaction_paid = DatabaseScheduledTransactions::new().update_scheduled_transaction(scheduled_transaction_id, &scheduled_transaction_paid, auth.token.claims.user_id).unwrap();
-
-                Ok(Json((scheduled_transaction_paid, new_transaction)))
+                match DatabaseScheduledTransactions::new().update_scheduled_transaction(scheduled_transaction_id, &scheduled_transaction_paid, auth.token.claims.user_id) {
+                    Ok(_) => Ok(Json(new_transaction)),
+                    Err(_) => Err(Status::InternalServerError)
+                }
             }
         }
         Err(_) => Err(Status::NotFound)
@@ -191,22 +192,27 @@ pub fn get_scheduled_transaction_with_id(id: i32, auth: Authentication) -> Resul
     }
 }
 
-#[patch("/scheduled-transactions/<id>", format = "json", data = "<scheduled_transaction>")]
-pub fn patch_scheduled_transaction(id: i32, scheduled_transaction: Json<PatchScheduledTransaction>, auth: Authentication) -> Result<Json<ScheduledTransaction>, Status> {
-    match DatabaseAccounts::new().get_account(scheduled_transaction.account_id, auth.token.claims.user_id) {
-        Ok(_) => {
-            match DatabaseCategories::new().get_category(scheduled_transaction.category_id, auth.token.claims.user_id) {
+#[patch("/scheduled-transactions/<id>", format = "json", data = "<scheduled_transaction_patch>")]
+pub fn patch_scheduled_transaction(id: i32, scheduled_transaction_patch: Json<PatchScheduledTransaction>, auth: Authentication) -> Result<Json<ScheduledTransaction>, Status> {
+    match DatabaseScheduledTransactions::new().get_scheduled_transaction(id, auth.token.claims.user_id) {
+        Ok(scheduled_transaction_tuple) => {
+            match DatabaseAccounts::new().get_account(scheduled_transaction_patch.account_id, auth.token.claims.user_id) {
                 Ok(_) => {
-                    match internal_get_new_scheduled_transaction_from_post_patch(&scheduled_transaction, &auth) {
-                        Some(mut new_scheduled_transaction) => {
-                            new_scheduled_transaction.current_repeat_count = scheduled_transaction.current_repeat_count;
+                    match DatabaseCategories::new().get_category(scheduled_transaction_patch.category_id, auth.token.claims.user_id) {
+                        Ok(_) => {
+                            match internal_get_new_scheduled_transaction_from_post_patch(&scheduled_transaction_patch, &auth) {
+                                Some(mut new_scheduled_transaction) => {
+                                    new_scheduled_transaction.current_repeat_count = scheduled_transaction_tuple.0.current_repeat_count;
 
-                            match DatabaseScheduledTransactions::new().update_scheduled_transaction(id, &new_scheduled_transaction, auth.token.claims.user_id) {
-                                Ok(scheduled_transaction) => Ok(Json(scheduled_transaction)),
-                                Err(_) => Err(Status::NotFound)
+                                    match DatabaseScheduledTransactions::new().update_scheduled_transaction(id, &new_scheduled_transaction, auth.token.claims.user_id) {
+                                        Ok(scheduled_transaction) => Ok(Json(scheduled_transaction)),
+                                        Err(_) => Err(Status::NotFound)
+                                    }
+                                }
+                                None => Err(Status::BadRequest)
                             }
                         }
-                        None => Err(Status::BadRequest)
+                        Err(_) => Err(Status::NotFound)
                     }
                 }
                 Err(_) => Err(Status::NotFound)

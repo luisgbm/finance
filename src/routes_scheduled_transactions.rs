@@ -125,21 +125,21 @@ fn internal_get_new_scheduled_transaction_from_post_patch<'a>(scheduled_transact
             }
         }
 
-        match scheduled_transaction.end_after_repeats {
-            Some(value) => {
-                end_after_repeats = Some(value);
-            }
-            None => {
-                return None;
-            }
-        }
-
         match scheduled_transaction.infinite_repeat {
             Some(value) => {
                 infinite_repeat = Some(value);
 
                 if value == true {
                     end_after_repeats = None;
+                } else {
+                    match scheduled_transaction.end_after_repeats {
+                        Some(value) => {
+                            end_after_repeats = Some(value);
+                        }
+                        None => {
+                            return None;
+                        }
+                    }
                 }
             }
             None => {

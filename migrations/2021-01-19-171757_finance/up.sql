@@ -61,6 +61,7 @@ CREATE TABLE scheduled_transactions
     repeat               BOOLEAN                                                              NOT NULL,
     repeat_freq          repeat_frequencies,
     repeat_interval      INTEGER,
+    infinite_repeat      BOOLEAN,
     end_after_repeats    INTEGER,
     current_repeat_count INTEGER,
     next_date            TIMESTAMP,

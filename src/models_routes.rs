@@ -17,6 +17,7 @@ pub struct GetScheduledTransaction {
     pub repeat: bool,
     pub repeat_freq: Option<RepeatFrequencies>,
     pub repeat_interval: Option<i32>,
+    pub infinite_repeat: Option<bool>,
     pub end_after_repeats: Option<i32>,
     pub current_repeat_count: Option<i32>,
     pub next_date: Option<NaiveDateTime>,
@@ -33,7 +34,8 @@ pub struct PostScheduledTransaction {
     pub repeat: bool,
     pub repeat_freq: Option<RepeatFrequencies>,
     pub repeat_interval: Option<i32>,
-    pub end_after_repeats: Option<i32>
+    pub infinite_repeat: Option<bool>,
+    pub end_after_repeats: Option<i32>,
 }
 
 pub type PatchScheduledTransaction = PostScheduledTransaction;

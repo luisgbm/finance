@@ -72,6 +72,7 @@ table! {
         repeat -> Bool,
         repeat_freq -> Nullable<RepeatFrequenciesMapping>,
         repeat_interval -> Nullable<Integer>,
+        infinite_repeat -> Nullable<Bool>,
         end_after_repeats -> Nullable<Integer>,
         current_repeat_count -> Nullable<Integer>,
         next_date -> Nullable<Timestamp>,

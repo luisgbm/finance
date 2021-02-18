@@ -58,7 +58,7 @@ pub fn post_scheduled_transaction_pay(scheduled_transaction_id: i32, transaction
             } else {
                 let new_repeat_count = scheduled_transaction.current_repeat_count.unwrap() + 1;
 
-                if new_repeat_count >= scheduled_transaction.end_after_repeats.unwrap() {
+                if scheduled_transaction.infinite_repeat.unwrap() == false && new_repeat_count >= scheduled_transaction.end_after_repeats.unwrap() {
                     DatabaseScheduledTransactions::new().delete_scheduled_transaction(scheduled_transaction_id, auth.token.claims.user_id).unwrap();
                     return Ok(Json(new_transaction));
                 }
@@ -80,6 +80,7 @@ pub fn post_scheduled_transaction_pay(scheduled_transaction_id: i32, transaction
                     repeat: scheduled_transaction.repeat,
                     repeat_freq: scheduled_transaction.repeat_freq,
                     repeat_interval: scheduled_transaction.repeat_interval,
+                    infinite_repeat: scheduled_transaction.infinite_repeat,
                     end_after_repeats: scheduled_transaction.end_after_repeats,
                     current_repeat_count: Some(new_repeat_count),
                     next_date: Some(new_date),
@@ -100,6 +101,7 @@ fn internal_get_new_scheduled_transaction_from_post_patch<'a>(scheduled_transact
     let repeat = scheduled_transaction.repeat;
     let mut repeat_freq = None;
     let mut repeat_interval = None;
+    let mut infinite_repeat = None;
     let mut end_after_repeats = None;
     let mut current_repeat_count = None;
     let next_date = Some(scheduled_transaction.created_date.clone());
@@ -132,6 +134,19 @@ fn internal_get_new_scheduled_transaction_from_post_patch<'a>(scheduled_transact
             }
         }
 
+        match scheduled_transaction.infinite_repeat {
+            Some(value) => {
+                infinite_repeat = Some(value);
+
+                if value == true {
+                    end_after_repeats = None;
+                }
+            }
+            None => {
+                return None;
+            }
+        }
+
         current_repeat_count = Some(0);
     }
 
@@ -144,6 +159,7 @@ fn internal_get_new_scheduled_transaction_from_post_patch<'a>(scheduled_transact
         repeat: scheduled_transaction.repeat,
         repeat_freq,
         repeat_interval,
+        infinite_repeat,
         end_after_repeats,
         current_repeat_count,
         next_date,

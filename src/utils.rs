@@ -112,6 +112,7 @@ pub fn create_scheduled_transaction_join(tuple: &(ScheduledTransaction, Category
         repeat: scheduled_transaction.repeat,
         repeat_freq: scheduled_transaction.repeat_freq,
         repeat_interval: scheduled_transaction.repeat_interval,
+        infinite_repeat: scheduled_transaction.infinite_repeat,
         end_after_repeats: scheduled_transaction.end_after_repeats,
         current_repeat_count: scheduled_transaction.current_repeat_count,
         next_date: scheduled_transaction.next_date.clone(),

@@ -63,6 +63,7 @@ impl DatabaseScheduledTransactions {
                 repeat.eq(update_scheduled_transaction.repeat),
                 repeat_freq.eq(update_scheduled_transaction.repeat_freq),
                 repeat_interval.eq(update_scheduled_transaction.repeat_interval),
+                infinite_repeat.eq(update_scheduled_transaction.infinite_repeat),
                 end_after_repeats.eq(update_scheduled_transaction.end_after_repeats),
                 current_repeat_count.eq(update_scheduled_transaction.current_repeat_count),
                 next_date.eq(update_scheduled_transaction.next_date)

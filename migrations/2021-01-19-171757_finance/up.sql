@@ -50,20 +50,40 @@ CREATE TABLE transfers
 
 CREATE TYPE repeat_frequencies AS ENUM ('days', 'weeks', 'months', 'years');
 
+CREATE SEQUENCE scheduled_transactions_transfers_id_seq;
+
 CREATE TABLE scheduled_transactions
 (
-    id                   INTEGER DEFAULT nextval('transactions_transfers_id_seq') PRIMARY KEY NOT NULL,
-    account_id           INTEGER REFERENCES accounts (id) ON DELETE CASCADE                   NOT NULL,
-    value                INTEGER                                                              NOT NULL,
-    description          TEXT                                                                 NOT NULL,
-    category_id          INTEGER REFERENCES categories (id) ON DELETE CASCADE                 NOT NULL,
-    created_date         TIMESTAMP                                                            NOT NULL,
-    repeat               BOOLEAN                                                              NOT NULL,
+    id                   INTEGER DEFAULT nextval('scheduled_transactions_transfers_id_seq') PRIMARY KEY NOT NULL,
+    account_id           INTEGER REFERENCES accounts (id) ON DELETE CASCADE                             NOT NULL,
+    value                INTEGER                                                                        NOT NULL,
+    description          TEXT                                                                           NOT NULL,
+    category_id          INTEGER REFERENCES categories (id) ON DELETE CASCADE                           NOT NULL,
+    created_date         TIMESTAMP                                                                      NOT NULL,
+    repeat               BOOLEAN                                                                        NOT NULL,
     repeat_freq          repeat_frequencies,
     repeat_interval      INTEGER,
     infinite_repeat      BOOLEAN,
     end_after_repeats    INTEGER,
     current_repeat_count INTEGER,
     next_date            TIMESTAMP,
-    user_id              INTEGER REFERENCES app_users (id) ON DELETE CASCADE                  NOT NULL
+    user_id              INTEGER REFERENCES app_users (id) ON DELETE CASCADE                            NOT NULL
+);
+
+CREATE TABLE scheduled_transfers
+(
+    id                     INTEGER DEFAULT nextval('scheduled_transactions_transfers_id_seq') PRIMARY KEY NOT NULL,
+    origin_account_id      INTEGER REFERENCES accounts (id) ON DELETE CASCADE                             NOT NULL,
+    destination_account_id INTEGER REFERENCES accounts (id) ON DELETE CASCADE                             NOT NULL,
+    value                  INTEGER                                                                        NOT NULL,
+    description            TEXT                                                                           NOT NULL,
+    created_date           TIMESTAMP                                                                      NOT NULL,
+    repeat                 BOOLEAN                                                                        NOT NULL,
+    repeat_freq            repeat_frequencies,
+    repeat_interval        INTEGER,
+    infinite_repeat        BOOLEAN,
+    end_after_repeats      INTEGER,
+    current_repeat_count   INTEGER,
+    next_date              TIMESTAMP,
+    user_id                INTEGER REFERENCES app_users (id) ON DELETE CASCADE                            NOT NULL
 );

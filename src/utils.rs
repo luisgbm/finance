@@ -6,7 +6,7 @@ use crate::db_accounts::DatabaseAccounts;
 use crate::db_transactions::DatabaseTransactions;
 use crate::db_transfers::DatabaseTransfers;
 use crate::models_db::{Account, AppUser, Category, CategoryTypes, RepeatFrequencies, ScheduledTransaction, ScheduledTransfer, Transaction, Transfer};
-use crate::models_routes::{GetScheduledTransaction, GetScheduledTransfer, TransactionTransferJoined};
+use crate::models_routes::{GetScheduledTransaction, GetScheduledTransfer, ScheduledTransactionTransferJoined, ScheduledTransactionType, TransactionTransferJoined};
 
 pub fn calculate_next_date(initial_date: NaiveDateTime, repeat: bool, repeat_freq: RepeatFrequencies, repeat_interval: i32, current_repeat_count: i32) -> NaiveDateTime {
     if repeat == true {
@@ -147,6 +147,54 @@ pub fn create_scheduled_transfer_join(tuple: &(ScheduledTransfer, AppUser)) -> R
             }
         }
         Err(e) => Err(e)
+    }
+}
+
+pub fn get_scheduled_transaction_to_join(get_scheduled_transaction: &GetScheduledTransaction) -> ScheduledTransactionTransferJoined {
+    ScheduledTransactionTransferJoined {
+        id: get_scheduled_transaction.id,
+        scheduled_type: ScheduledTransactionType::Transaction,
+        value: get_scheduled_transaction.value,
+        description: get_scheduled_transaction.description.clone(),
+        created_date: get_scheduled_transaction.created_date.clone(),
+        account_id: Some(get_scheduled_transaction.account_id),
+        account_name: Some(get_scheduled_transaction.account_name.clone()),
+        origin_account_id: None,
+        origin_account_name: None,
+        destination_account_id: None,
+        destination_account_name: None,
+        repeat: get_scheduled_transaction.repeat,
+        repeat_freq: get_scheduled_transaction.repeat_freq,
+        repeat_interval: get_scheduled_transaction.repeat_interval,
+        infinite_repeat: get_scheduled_transaction.infinite_repeat,
+        end_after_repeats: get_scheduled_transaction.end_after_repeats,
+        current_repeat_count: get_scheduled_transaction.current_repeat_count,
+        next_date: get_scheduled_transaction.next_date,
+        user_id: get_scheduled_transaction.user_id,
+    }
+}
+
+pub fn get_scheduled_transfer_to_join(get_scheduled_transfer: &GetScheduledTransfer) -> ScheduledTransactionTransferJoined {
+    ScheduledTransactionTransferJoined {
+        id: get_scheduled_transfer.id,
+        scheduled_type: ScheduledTransactionType::Transfer,
+        value: get_scheduled_transfer.value,
+        description: get_scheduled_transfer.description.clone(),
+        created_date: get_scheduled_transfer.created_date.clone(),
+        account_id: None,
+        account_name: None,
+        origin_account_id: Some(get_scheduled_transfer.origin_account_id),
+        origin_account_name: Some(get_scheduled_transfer.origin_account_name.clone()),
+        destination_account_id: Some(get_scheduled_transfer.destination_account_id),
+        destination_account_name: Some(get_scheduled_transfer.destination_account_name.clone()),
+        repeat: get_scheduled_transfer.repeat,
+        repeat_freq: get_scheduled_transfer.repeat_freq,
+        repeat_interval: get_scheduled_transfer.repeat_interval,
+        infinite_repeat: get_scheduled_transfer.infinite_repeat,
+        end_after_repeats: get_scheduled_transfer.end_after_repeats,
+        current_repeat_count: get_scheduled_transfer.current_repeat_count,
+        next_date: get_scheduled_transfer.next_date,
+        user_id: get_scheduled_transfer.user_id,
     }
 }
 

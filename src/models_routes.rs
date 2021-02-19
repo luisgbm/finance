@@ -3,6 +3,35 @@ use serde::{Deserialize, Serialize};
 
 use crate::models_db::{CategoryTypes, RepeatFrequencies};
 
+#[derive(Debug, Serialize, Deserialize, Copy, Clone, PartialEq)]
+pub enum ScheduledTransactionType {
+    Transaction,
+    Transfer,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct ScheduledTransactionTransferJoined {
+    pub id: i32,
+    pub scheduled_type: ScheduledTransactionType,
+    pub value: i32,
+    pub description: String,
+    pub created_date: NaiveDateTime,
+    pub account_id: Option<i32>,
+    pub account_name: Option<String>,
+    pub origin_account_id: Option<i32>,
+    pub origin_account_name: Option<String>,
+    pub destination_account_id: Option<i32>,
+    pub destination_account_name: Option<String>,
+    pub repeat: bool,
+    pub repeat_freq: Option<RepeatFrequencies>,
+    pub repeat_interval: Option<i32>,
+    pub infinite_repeat: Option<bool>,
+    pub end_after_repeats: Option<i32>,
+    pub current_repeat_count: Option<i32>,
+    pub next_date: Option<NaiveDateTime>,
+    pub user_id: i32,
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct PostScheduledTransferPay {
     pub origin_account_id: i32,

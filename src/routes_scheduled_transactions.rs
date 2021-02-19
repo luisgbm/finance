@@ -7,9 +7,10 @@ use crate::auth_guard::Authentication;
 use crate::db_accounts::DatabaseAccounts;
 use crate::db_categories::DatabaseCategories;
 use crate::db_scheduled_transactions::DatabaseScheduledTransactions;
+use crate::db_scheduled_transfers::DatabaseScheduledTransfers;
 use crate::db_transactions::DatabaseTransactions;
 use crate::models_db::{NewScheduledTransaction, NewTransaction, ScheduledTransaction, Transaction};
-use crate::models_routes::{GetScheduledTransaction, PatchScheduledTransaction, PostScheduledTransaction, PostScheduledTransactionPay};
+use crate::models_routes::{GetScheduledTransaction, PatchScheduledTransaction, PostScheduledTransaction, PostScheduledTransactionPay, ScheduledTransactionTransferJoined};
 use crate::utils;
 
 #[post("/scheduled-transactions/<scheduled_transaction_id>/pay", format = "json", data = "<transaction>")]
@@ -165,16 +166,33 @@ pub fn post_scheduled_transaction(scheduled_transaction: Json<PostScheduledTrans
 }
 
 #[get("/scheduled-transactions")]
-pub fn get_scheduled_transactions(auth: Authentication) -> Json<Vec<GetScheduledTransaction>> {
+pub fn get_scheduled_transactions(auth: Authentication) -> Result<Json<Vec<ScheduledTransactionTransferJoined>>, Status> {
     let scheduled_transactions_tuples = DatabaseScheduledTransactions::new().get_all_scheduled_transactions(auth.token.claims.user_id);
+    let scheduled_transfers_tuples = DatabaseScheduledTransfers::new().get_all_scheduled_transfers(auth.token.claims.user_id);
 
-    let mut scheduled_transactions = Vec::new();
+    let mut scheduled_transactions_transfers = Vec::new();
 
     for scheduled_transaction_tuple in &scheduled_transactions_tuples {
-        scheduled_transactions.push(utils::create_scheduled_transaction_join(scheduled_transaction_tuple));
+        let get_scheduled_transaction = utils::create_scheduled_transaction_join(scheduled_transaction_tuple);
+        scheduled_transactions_transfers.push(utils::get_scheduled_transaction_to_join(&get_scheduled_transaction));
     }
 
-    Json(scheduled_transactions)
+    for scheduled_transfer_tuple in &scheduled_transfers_tuples {
+        match utils::create_scheduled_transfer_join(scheduled_transfer_tuple) {
+            Ok(scheduled_transfer) => {
+                let get_scheduled_transfer = utils::get_scheduled_transfer_to_join(&scheduled_transfer);
+                scheduled_transactions_transfers.push(get_scheduled_transfer);
+            }
+            Err(_) => {
+                return Err(Status::BadRequest);
+            }
+        }
+    }
+
+    scheduled_transactions_transfers.sort_by_key(|t| t.created_date);
+    scheduled_transactions_transfers.reverse();
+
+    Ok(Json(scheduled_transactions_transfers))
 }
 
 #[get("/scheduled-transactions/<id>")]

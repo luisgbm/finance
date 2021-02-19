@@ -6,6 +6,7 @@ use crate::schema::accounts;
 use crate::schema::app_users;
 use crate::schema::categories;
 use crate::schema::scheduled_transactions;
+use crate::schema::scheduled_transfers;
 use crate::schema::transactions;
 use crate::schema::transfers;
 
@@ -44,12 +45,12 @@ pub struct ScheduledTransfer {
 }
 
 #[derive(Insertable, Serialize, Deserialize)]
-#[table_name = "scheduled_transactions"]
+#[table_name = "scheduled_transfers"]
 pub struct NewScheduledTransfer<'a> {
-    pub account_id: i32,
+    pub origin_account_id: i32,
+    pub destination_account_id: i32,
     pub value: i32,
     pub description: &'a str,
-    pub category_id: i32,
     pub created_date: NaiveDateTime,
     pub repeat: bool,
     pub repeat_freq: Option<RepeatFrequencies>,

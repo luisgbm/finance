@@ -4,6 +4,51 @@ use serde::{Deserialize, Serialize};
 use crate::models_db::{CategoryTypes, RepeatFrequencies};
 
 #[derive(Serialize, Deserialize)]
+pub struct PostScheduledTransferPay {
+    pub origin_account_id: i32,
+    pub destination_account_id: i32,
+    pub value: i32,
+    pub description: String,
+    pub date: NaiveDateTime,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct GetScheduledTransfer {
+    pub id: i32,
+    pub origin_account_id: i32,
+    pub origin_account_name: String,
+    pub destination_account_id: i32,
+    pub destination_account_name: String,
+    pub value: i32,
+    pub description: String,
+    pub created_date: NaiveDateTime,
+    pub repeat: bool,
+    pub repeat_freq: Option<RepeatFrequencies>,
+    pub repeat_interval: Option<i32>,
+    pub infinite_repeat: Option<bool>,
+    pub end_after_repeats: Option<i32>,
+    pub current_repeat_count: Option<i32>,
+    pub next_date: Option<NaiveDateTime>,
+    pub user_id: i32,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct PostScheduledTransfer {
+    pub origin_account_id: i32,
+    pub destination_account_id: i32,
+    pub value: i32,
+    pub description: String,
+    pub created_date: NaiveDateTime,
+    pub repeat: bool,
+    pub repeat_freq: Option<RepeatFrequencies>,
+    pub repeat_interval: Option<i32>,
+    pub infinite_repeat: Option<bool>,
+    pub end_after_repeats: Option<i32>,
+}
+
+pub type PatchScheduledTransfer = PostScheduledTransfer;
+
+#[derive(Serialize, Deserialize)]
 pub struct GetScheduledTransaction {
     pub id: i32,
     pub account_id: i32,

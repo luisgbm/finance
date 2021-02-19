@@ -26,6 +26,7 @@ pub mod db_transfers;
 pub mod db_auth;
 pub mod db_scheduled_transactions;
 pub mod db_scheduled_transfers;
+pub mod routes_scheduled_transfers;
 
 fn main() {
     let cors = rocket_cors::CorsOptions::default().to_cors().unwrap();
@@ -38,6 +39,7 @@ fn main() {
     all_routes.append(&mut routes_transactions::get_routes());
     all_routes.append(&mut routes_transfers::get_routes());
     all_routes.append(&mut routes_scheduled_transactions::get_routes());
+    all_routes.append(&mut routes_scheduled_transfers::get_routes());
 
     rocket::ignite().mount("/", all_routes).attach(cors).launch();
 }

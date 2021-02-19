@@ -1,5 +1,3 @@
-use chrono::{Duration, NaiveDateTime};
-use chronoutil::RelativeDuration;
 use rocket;
 use rocket::http::Status;
 use rocket::Route;
@@ -10,30 +8,9 @@ use crate::db_accounts::DatabaseAccounts;
 use crate::db_categories::DatabaseCategories;
 use crate::db_scheduled_transactions::DatabaseScheduledTransactions;
 use crate::db_transactions::DatabaseTransactions;
-use crate::models_db::{NewScheduledTransaction, NewTransaction, RepeatFrequencies, ScheduledTransaction, Transaction};
+use crate::models_db::{NewScheduledTransaction, NewTransaction, ScheduledTransaction, Transaction};
 use crate::models_routes::{GetScheduledTransaction, PatchScheduledTransaction, PostScheduledTransaction, PostScheduledTransactionPay};
 use crate::utils;
-
-fn internal_calculate_next_date(initial_date: NaiveDateTime, repeat: bool, repeat_freq: RepeatFrequencies, repeat_interval: i32, current_repeat_count: i32) -> NaiveDateTime {
-    if repeat == true {
-        match repeat_freq {
-            RepeatFrequencies::Days => {
-                initial_date + RelativeDuration::days((current_repeat_count * repeat_interval) as i64)
-            }
-            RepeatFrequencies::Weeks => {
-                initial_date + Duration::weeks((current_repeat_count * repeat_interval) as i64)
-            }
-            RepeatFrequencies::Months => {
-                initial_date + RelativeDuration::months(current_repeat_count * repeat_interval)
-            }
-            RepeatFrequencies::Years => {
-                initial_date + RelativeDuration::years(current_repeat_count * repeat_interval)
-            }
-        }
-    } else {
-        initial_date
-    }
-}
 
 #[post("/scheduled-transactions/<scheduled_transaction_id>/pay", format = "json", data = "<transaction>")]
 pub fn post_scheduled_transaction_pay(scheduled_transaction_id: i32, transaction: Json<PostScheduledTransactionPay>, auth: Authentication) -> Result<Json<Transaction>, Status> {
@@ -63,7 +40,7 @@ pub fn post_scheduled_transaction_pay(scheduled_transaction_id: i32, transaction
                     return Ok(Json(new_transaction));
                 }
 
-                let new_date = internal_calculate_next_date(
+                let new_date = utils::calculate_next_date(
                     scheduled_transaction.created_date,
                     scheduled_transaction.repeat,
                     scheduled_transaction.repeat_freq.unwrap(),

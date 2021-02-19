@@ -1,10 +1,33 @@
 use chrono::{Datelike, Duration, NaiveDate, NaiveDateTime};
+use chronoutil::RelativeDuration;
+use diesel::result::Error;
 
 use crate::db_accounts::DatabaseAccounts;
 use crate::db_transactions::DatabaseTransactions;
 use crate::db_transfers::DatabaseTransfers;
-use crate::models_db::{Account, AppUser, Category, CategoryTypes, ScheduledTransaction, Transaction, Transfer};
-use crate::models_routes::{GetScheduledTransaction, TransactionTransferJoined};
+use crate::models_db::{Account, AppUser, Category, CategoryTypes, RepeatFrequencies, ScheduledTransaction, ScheduledTransfer, Transaction, Transfer};
+use crate::models_routes::{GetScheduledTransaction, GetScheduledTransfer, TransactionTransferJoined};
+
+pub fn calculate_next_date(initial_date: NaiveDateTime, repeat: bool, repeat_freq: RepeatFrequencies, repeat_interval: i32, current_repeat_count: i32) -> NaiveDateTime {
+    if repeat == true {
+        match repeat_freq {
+            RepeatFrequencies::Days => {
+                initial_date + RelativeDuration::days((current_repeat_count * repeat_interval) as i64)
+            }
+            RepeatFrequencies::Weeks => {
+                initial_date + Duration::weeks((current_repeat_count * repeat_interval) as i64)
+            }
+            RepeatFrequencies::Months => {
+                initial_date + RelativeDuration::months(current_repeat_count * repeat_interval)
+            }
+            RepeatFrequencies::Years => {
+                initial_date + RelativeDuration::years(current_repeat_count * repeat_interval)
+            }
+        }
+    } else {
+        initial_date
+    }
+}
 
 pub fn get_days_from_month(year: i32, month: u32) -> i64 {
     NaiveDate::from_ymd(
@@ -91,6 +114,40 @@ pub fn create_transaction_from_transfer(transfer: &Transfer, category_type: Cate
     };
 
     transaction
+}
+
+pub fn create_scheduled_transfer_join(tuple: &(ScheduledTransfer, AppUser)) -> Result<GetScheduledTransfer, Error> {
+    let scheduled_transfer = &tuple.0;
+    let app_user = &tuple.1;
+
+    match DatabaseAccounts::new().get_account(scheduled_transfer.origin_account_id, app_user.id) {
+        Ok(origin_account) => {
+            match DatabaseAccounts::new().get_account(scheduled_transfer.destination_account_id, app_user.id) {
+                Ok(destination_account) => {
+                    Ok(GetScheduledTransfer {
+                        id: scheduled_transfer.id,
+                        origin_account_id: origin_account.id,
+                        origin_account_name: origin_account.name.clone(),
+                        destination_account_id: destination_account.id,
+                        destination_account_name: destination_account.name.clone(),
+                        value: scheduled_transfer.value,
+                        description: scheduled_transfer.description.clone(),
+                        created_date: scheduled_transfer.created_date.clone(),
+                        repeat: scheduled_transfer.repeat,
+                        repeat_freq: scheduled_transfer.repeat_freq,
+                        repeat_interval: scheduled_transfer.repeat_interval,
+                        infinite_repeat: scheduled_transfer.infinite_repeat,
+                        end_after_repeats: scheduled_transfer.end_after_repeats,
+                        current_repeat_count: scheduled_transfer.current_repeat_count,
+                        next_date: scheduled_transfer.next_date,
+                        user_id: app_user.id,
+                    })
+                }
+                Err(e) => Err(e)
+            }
+        }
+        Err(e) => Err(e)
+    }
 }
 
 pub fn create_scheduled_transaction_join(tuple: &(ScheduledTransaction, Category, Account, AppUser)) -> GetScheduledTransaction {

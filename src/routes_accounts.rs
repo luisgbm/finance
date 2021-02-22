@@ -4,60 +4,45 @@ use rocket::Route;
 use rocket_contrib::json::Json;
 
 use crate::auth_guard::Authentication;
+use crate::controller_accounts;
 use crate::db_accounts::DatabaseAccounts;
 use crate::models_db::{Account, NewAccount};
 use crate::models_routes::{GetAccount, PatchAccount, PostAccount};
 use crate::utils;
 
 #[post("/accounts", format = "json", data = "<account>")]
-pub fn post_account(account: Json<PostAccount>, auth: Authentication) -> Json<Account> {
+pub fn post_account(account: Json<PostAccount>, auth: Authentication) -> Json<GetAccount> {
     let new_account = NewAccount {
         name: account.name.as_str(),
         user_id: auth.token.claims.user_id,
     };
 
-    Json(DatabaseAccounts::new().new_account(&new_account))
+    let account = DatabaseAccounts::new().new_account(&new_account);
+
+    Json(GetAccount {
+        id: account.id,
+        name: account.name,
+        balance: 0,
+        user_id: account.user_id,
+    })
 }
 
 #[get("/accounts")]
 pub fn get_accounts(auth: Authentication) -> Json<Vec<GetAccount>> {
-    let accounts = DatabaseAccounts::new().get_all_accounts(auth.token.claims.user_id);
-
-    let mut accounts_with_balance = Vec::new();
-
-    for account in &accounts {
-        let balance = utils::get_account_balance(account.id, auth.token.claims.user_id);
-
-        accounts_with_balance.push(GetAccount {
-            id: account.id,
-            name: account.name.clone(),
-            balance,
-            user_id: auth.token.claims.user_id,
-        });
-    }
-
-    Json(accounts_with_balance)
+    Json(controller_accounts::get_all_accounts(auth.token.claims.user_id))
 }
 
 #[get("/accounts/<id>")]
 pub fn get_account_with_id(id: i32, auth: Authentication) -> Result<Json<GetAccount>, Status> {
-    match DatabaseAccounts::new().get_account(id, auth.token.claims.user_id) {
-        Ok(account) => {
-            let balance = utils::get_account_balance(account.id, auth.token.claims.user_id);
-
-            Ok(Json(GetAccount {
-                id: account.id,
-                name: account.name.clone(),
-                balance,
-                user_id: auth.token.claims.user_id,
-            }))
-        }
-        Err(_) => Err(Status::NotFound)
+    if let Some(account) = controller_accounts::get_account(id, auth.token.claims.user_id) {
+        return Ok(Json(account));
     }
+
+    Err(Status::NotFound)
 }
 
 #[patch("/accounts/<id>", format = "json", data = "<account>")]
-pub fn patch_account(id: i32, account: Json<PatchAccount>, auth: Authentication) -> Result<Json<Account>, Status> {
+pub fn patch_account(id: i32, account: Json<PatchAccount>, auth: Authentication) -> Result<Json<GetAccount>, Status> {
     let account = account.into_inner();
 
     let account = NewAccount {
@@ -66,7 +51,14 @@ pub fn patch_account(id: i32, account: Json<PatchAccount>, auth: Authentication)
     };
 
     match DatabaseAccounts::new().update_account(id, &account, auth.token.claims.user_id) {
-        Ok(account) => Ok(Json(account)),
+        Ok(account) => {
+            Ok(Json(GetAccount {
+                id: account.id,
+                name: account.name,
+                balance: utils::get_account_balance(account.id, account.user_id),
+                user_id: account.user_id,
+            }))
+        },
         Err(_) => Err(Status::NotFound)
     }
 }

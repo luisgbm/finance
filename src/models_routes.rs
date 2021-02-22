@@ -3,6 +3,12 @@ use serde::{Deserialize, Serialize};
 
 use crate::models_db::{CategoryTypes, RepeatFrequencies};
 
+#[derive(Serialize, Deserialize)]
+pub struct InitialData {
+    pub token: String,
+    pub accounts: Vec<GetAccount>,
+}
+
 #[derive(Debug, Serialize, Deserialize, Copy, Clone, PartialEq)]
 pub enum ScheduledTransactionType {
     Transaction,

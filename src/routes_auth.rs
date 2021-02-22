@@ -5,33 +5,32 @@ use rocket::Route;
 use rocket_contrib::json::Json;
 
 use crate::auth_guard::Authentication;
+use crate::controller_accounts;
+use crate::controller_auth;
 use crate::db_auth::DatabaseAuth;
 use crate::jwt;
 use crate::models_db::NewAppUser;
-
-fn login_internal(user: &NewAppUser) -> Result<String, Status> {
-    let result = DatabaseAuth::new().authenticate_user(user);
-
-    match result {
-        Ok(user) => {
-            Ok(jwt::create_jwt(user.id))
-        }
-        Err(_) => Err(Status::Unauthorized)
-    }
-}
+use crate::models_routes::InitialData;
 
 #[post("/login", format = "json", data = "<user>")]
-pub fn login(user: Json<NewAppUser>) -> Result<String, Status> {
-    login_internal(&user.into_inner())
+pub fn login(user: Json<NewAppUser>) -> Result<Json<InitialData>, Status> {
+    if let Some(initial_data) = controller_auth::login(&user.into_inner()) {
+        return Ok(Json(initial_data));
+    }
+
+    Err(Status::Unauthorized)
 }
 
 #[get("/token")]
-pub fn validate_token(_auth: Authentication) -> Status {
-    Status::Ok
+pub fn validate_token(auth: Authentication) -> Json<InitialData> {
+    Json(InitialData {
+        token: jwt::create_jwt(auth.token.claims.user_id),
+        accounts: controller_accounts::get_all_accounts(auth.token.claims.user_id),
+    })
 }
 
 #[post("/users", format = "json", data = "<user_json>")]
-pub fn post_user(user_json: Json<NewAppUser>) -> Result<String, Status> {
+pub fn post_user(user_json: Json<NewAppUser>) -> Result<Json<InitialData>, Status> {
     let result = DatabaseAuth::new().new_user(&user_json);
 
     match result {
@@ -41,7 +40,11 @@ pub fn post_user(user_json: Json<NewAppUser>) -> Result<String, Status> {
                 password: user_json.password,
             };
 
-            login_internal(&new_app_user)
+            if let Some(initial_data) = controller_auth::login(&new_app_user) {
+                Ok(Json(initial_data))
+            } else {
+                Err(Status::Unauthorized)
+            }
         }
         Err(err) => {
             match err {

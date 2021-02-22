@@ -7,6 +7,7 @@ use rocket_contrib::json::Json;
 use crate::auth_guard::Authentication;
 use crate::controller_accounts;
 use crate::controller_auth;
+use crate::controller_categories;
 use crate::db_auth::DatabaseAuth;
 use crate::jwt;
 use crate::models_db::NewAppUser;
@@ -23,9 +24,12 @@ pub fn login(user: Json<NewAppUser>) -> Result<Json<InitialData>, Status> {
 
 #[get("/token")]
 pub fn validate_token(auth: Authentication) -> Json<InitialData> {
+    let user_id = auth.token.claims.user_id;
+
     Json(InitialData {
-        token: jwt::create_jwt(auth.token.claims.user_id),
-        accounts: controller_accounts::get_all_accounts(auth.token.claims.user_id),
+        token: jwt::create_jwt(user_id),
+        accounts: controller_accounts::get_all_accounts(user_id),
+        categories: controller_categories::get_all_categories(user_id),
     })
 }
 

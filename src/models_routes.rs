@@ -1,12 +1,13 @@
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 
-use crate::models_db::{CategoryTypes, RepeatFrequencies};
+use crate::models_db::{Category, CategoryTypes, RepeatFrequencies};
 
 #[derive(Serialize, Deserialize)]
 pub struct InitialData {
     pub token: String,
     pub accounts: Vec<GetAccount>,
+    pub categories: Vec<Category>
 }
 
 #[derive(Debug, Serialize, Deserialize, Copy, Clone, PartialEq)]

@@ -8,6 +8,7 @@ use crate::auth_guard::Authentication;
 use crate::controller_accounts;
 use crate::controller_auth;
 use crate::controller_categories;
+use crate::controller_scheduled_transactions;
 use crate::db_auth::DatabaseAuth;
 use crate::jwt;
 use crate::models_db::NewAppUser;
@@ -30,6 +31,7 @@ pub fn validate_token(auth: Authentication) -> Json<InitialData> {
         token: jwt::create_jwt(user_id),
         accounts: controller_accounts::get_all_accounts(user_id),
         categories: controller_categories::get_all_categories(user_id),
+        scheduled_transactions: controller_scheduled_transactions::get_all_scheduled_transactions(user_id).expect("Error loading scheduled transactions")
     })
 }
 

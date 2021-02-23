@@ -7,7 +7,8 @@ use crate::models_db::{Category, CategoryTypes, RepeatFrequencies};
 pub struct InitialData {
     pub token: String,
     pub accounts: Vec<GetAccount>,
-    pub categories: Vec<Category>
+    pub categories: Vec<Category>,
+    pub scheduled_transactions: Vec<ScheduledTransactionTransferJoined>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Copy, Clone, PartialEq)]

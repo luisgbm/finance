@@ -30,6 +30,7 @@ pub mod routes_scheduled_transfers;
 pub mod controller_accounts;
 pub mod controller_auth;
 pub mod controller_categories;
+pub mod controller_scheduled_transactions;
 
 fn main() {
     let cors = rocket_cors::CorsOptions::default().to_cors().unwrap();

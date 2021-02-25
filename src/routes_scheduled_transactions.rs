@@ -247,14 +247,22 @@ fn internal_get_new_scheduled_transaction_for_post_patch(scheduled_transaction: 
 }
 
 #[post("/scheduled-transactions", format = "json", data = "<scheduled_transaction>")]
-pub fn post_scheduled_transaction(scheduled_transaction: Json<PostScheduledTransaction>, auth: Authentication) -> Result<Json<ScheduledTransaction>, Status> {
+pub fn post_scheduled_transaction(scheduled_transaction: Json<PostScheduledTransaction>, auth: Authentication) -> Result<Json<GetScheduledTransaction>, Status> {
     let new_scheduled_transaction = internal_get_new_scheduled_transaction_for_post_patch(&scheduled_transaction, &auth);
 
     if new_scheduled_transaction.is_none() {
         return Err(Status::BadRequest);
     }
 
-    Ok(Json(DatabaseScheduledTransactions::new().new_scheduled_transaction(&new_scheduled_transaction.unwrap())))
+    let new_scheduled_transaction = DatabaseScheduledTransactions::new().new_scheduled_transaction(&new_scheduled_transaction.unwrap());
+
+    let get_scheduled_transaction = utils::create_scheduled_transaction_join(&new_scheduled_transaction);
+
+    if get_scheduled_transaction.is_none() {
+        return Err(Status::InternalServerError);
+    }
+
+    Ok(Json(get_scheduled_transaction.unwrap()))
 }
 
 #[patch("/scheduled-transactions/<id>", format = "json", data = "<scheduled_transaction_patch>")]
@@ -275,7 +283,9 @@ pub fn patch_scheduled_transaction(id: i32, scheduled_transaction_patch: Json<Pa
 
     let mut new_scheduled_transaction = new_scheduled_transaction.unwrap();
 
-    new_scheduled_transaction.current_repeat_count = scheduled_transaction.current_repeat_count;
+    if new_scheduled_transaction.repeat == true {
+        new_scheduled_transaction.current_repeat_count = scheduled_transaction.current_repeat_count;
+    }
 
     let updated_scheduled_transaction = DatabaseScheduledTransactions::new().update_scheduled_transaction(id, &new_scheduled_transaction, auth.token.claims.user_id);
 

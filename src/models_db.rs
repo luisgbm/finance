@@ -6,9 +6,14 @@ use crate::schema::accounts;
 use crate::schema::app_users;
 use crate::schema::categories;
 use crate::schema::scheduled_transactions;
-use crate::schema::scheduled_transfers;
 use crate::schema::transactions;
 use crate::schema::transfers;
+
+#[derive(DbEnum, Debug, Serialize, Deserialize, Copy, Clone, PartialEq)]
+pub enum ScheduledTransactionKinds {
+    Transaction,
+    Transfer,
+}
 
 #[derive(DbEnum, Debug, Serialize, Deserialize, Copy, Clone, PartialEq)]
 pub enum CategoryTypes {
@@ -27,49 +32,16 @@ pub enum RepeatFrequencies {
 }
 
 #[derive(Queryable, Serialize, Deserialize)]
-pub struct ScheduledTransfer {
-    pub id: i32,
-    pub origin_account_id: i32,
-    pub destination_account_id: i32,
-    pub value: i32,
-    pub description: String,
-    pub created_date: NaiveDateTime,
-    pub repeat: bool,
-    pub repeat_freq: Option<RepeatFrequencies>,
-    pub repeat_interval: Option<i32>,
-    pub infinite_repeat: Option<bool>,
-    pub end_after_repeats: Option<i32>,
-    pub current_repeat_count: Option<i32>,
-    pub next_date: Option<NaiveDateTime>,
-    pub user_id: i32,
-}
-
-#[derive(Insertable, Serialize, Deserialize)]
-#[table_name = "scheduled_transfers"]
-pub struct NewScheduledTransfer<'a> {
-    pub origin_account_id: i32,
-    pub destination_account_id: i32,
-    pub value: i32,
-    pub description: &'a str,
-    pub created_date: NaiveDateTime,
-    pub repeat: bool,
-    pub repeat_freq: Option<RepeatFrequencies>,
-    pub repeat_interval: Option<i32>,
-    pub infinite_repeat: Option<bool>,
-    pub end_after_repeats: Option<i32>,
-    pub current_repeat_count: Option<i32>,
-    pub next_date: Option<NaiveDateTime>,
-    pub user_id: i32,
-}
-
-#[derive(Queryable, Serialize, Deserialize)]
 pub struct ScheduledTransaction {
     pub id: i32,
-    pub account_id: i32,
+    pub kind: ScheduledTransactionKinds,
     pub value: i32,
-    pub description: String,
-    pub category_id: i32,
+    pub description: Option<String>,
     pub created_date: NaiveDateTime,
+    pub account_id: Option<i32>,
+    pub category_id: Option<i32>,
+    pub origin_account_id: Option<i32>,
+    pub destination_account_id: Option<i32>,
     pub repeat: bool,
     pub repeat_freq: Option<RepeatFrequencies>,
     pub repeat_interval: Option<i32>,
@@ -82,12 +54,15 @@ pub struct ScheduledTransaction {
 
 #[derive(Insertable, Serialize, Deserialize)]
 #[table_name = "scheduled_transactions"]
-pub struct NewScheduledTransaction<'a> {
-    pub account_id: i32,
+pub struct NewScheduledTransaction {
+    pub kind: ScheduledTransactionKinds,
     pub value: i32,
-    pub description: &'a str,
-    pub category_id: i32,
+    pub description: Option<String>,
     pub created_date: NaiveDateTime,
+    pub account_id: Option<i32>,
+    pub category_id: Option<i32>,
+    pub origin_account_id: Option<i32>,
+    pub destination_account_id: Option<i32>,
     pub repeat: bool,
     pub repeat_freq: Option<RepeatFrequencies>,
     pub repeat_interval: Option<i32>,

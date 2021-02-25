@@ -9,6 +9,6 @@ DROP TABLE transfers CASCADE;
 
 DROP TYPE category_types CASCADE;
 DROP TYPE repeat_frequencies CASCADE;
-DROP TYPE scheduled_transacion_kind CASCADE;
+DROP TYPE scheduled_transacion_kinds CASCADE;
 
 DROP SEQUENCE transactions_transfers_id_seq;

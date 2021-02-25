@@ -50,12 +50,12 @@ CREATE TABLE transfers
 
 CREATE TYPE repeat_frequencies AS ENUM ('days', 'weeks', 'months', 'years');
 
-CREATE TYPE scheduled_transacion_kind AS ENUM ('transaction', 'transfer');
+CREATE TYPE scheduled_transacion_kinds AS ENUM ('transaction', 'transfer');
 
 CREATE TABLE scheduled_transactions
 (
     id                     SERIAL PRIMARY KEY                                  NOT NULL,
-    kind                   scheduled_transacion_kind                           NOT NULL,
+    kind                   scheduled_transacion_kinds                          NOT NULL,
     value                  INTEGER                                             NOT NULL,
     description            TEXT,
     created_date           TIMESTAMP                                           NOT NULL,

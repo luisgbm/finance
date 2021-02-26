@@ -9,7 +9,7 @@ table! {
 }
 
 table! {
-    use crate::models_db::CategoryTypesMapping;
+    use crate::database::models::CategoryTypesMapping;
     use diesel::sql_types::{Integer, Text};
 
     categories (id) {
@@ -59,8 +59,8 @@ table! {
 }
 
 table! {
-    use crate::models_db::RepeatFrequenciesMapping;
-    use crate::models_db::ScheduledTransactionKindsMapping;
+    use crate::database::models::RepeatFrequenciesMapping;
+    use crate::database::models::ScheduledTransactionKindsMapping;
     use diesel::sql_types::{Integer, Text, Timestamp, Bool, Nullable};
 
     scheduled_transactions (id) {

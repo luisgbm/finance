@@ -2,12 +2,12 @@ use chrono::NaiveDateTime;
 use diesel_derive_enum::DbEnum;
 use serde::{Deserialize, Serialize};
 
-use crate::schema::accounts;
-use crate::schema::app_users;
-use crate::schema::categories;
-use crate::schema::scheduled_transactions;
-use crate::schema::transactions;
-use crate::schema::transfers;
+use crate::database::schema::accounts;
+use crate::database::schema::app_users;
+use crate::database::schema::categories;
+use crate::database::schema::scheduled_transactions;
+use crate::database::schema::transactions;
+use crate::database::schema::transfers;
 
 #[derive(DbEnum, Debug, Serialize, Deserialize, Copy, Clone, PartialEq)]
 pub enum ScheduledTransactionKinds {

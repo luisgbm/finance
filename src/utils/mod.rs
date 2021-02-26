@@ -1,12 +1,14 @@
 use chrono::{Duration, NaiveDateTime};
 use chronoutil::RelativeDuration;
 
-use crate::db_accounts::DatabaseAccounts;
-use crate::db_categories::DatabaseCategories;
-use crate::db_transactions::DatabaseTransactions;
-use crate::db_transfers::DatabaseTransfers;
-use crate::models_db::{Account, Category, CategoryTypes, RepeatFrequencies, ScheduledTransaction, ScheduledTransactionKinds, Transaction, Transfer};
-use crate::models_routes::{GetScheduledTransaction, TransactionTransferJoined};
+use crate::database::accounts::DatabaseAccounts;
+use crate::database::categories::DatabaseCategories;
+use crate::database::models::{Account, Category, CategoryTypes, RepeatFrequencies, ScheduledTransaction, ScheduledTransactionKinds, Transaction, Transfer};
+use crate::database::transactions::DatabaseTransactions;
+use crate::database::transfers::DatabaseTransfers;
+use crate::routes::models::{GetScheduledTransaction, TransactionTransferJoined};
+
+pub mod jwt;
 
 pub fn calculate_next_date(initial_date: NaiveDateTime, repeat: bool, repeat_freq: RepeatFrequencies, repeat_interval: i32, current_repeat_count: i32) -> NaiveDateTime {
     if repeat == true {

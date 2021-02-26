@@ -3,10 +3,10 @@ use rocket::http::Status;
 use rocket::Route;
 use rocket_contrib::json::Json;
 
-use crate::auth_guard::Authentication;
-use crate::db_categories::DatabaseCategories;
-use crate::models_db::{Category, CategoryTypes, NewCategory};
-use crate::models_routes::{PatchCategory, PostCategory};
+use crate::database::categories::DatabaseCategories;
+use crate::database::models::{Category, CategoryTypes, NewCategory};
+use crate::routes::auth_guard::Authentication;
+use crate::routes::models::{PatchCategory, PostCategory};
 
 #[post("/categories", format = "json", data = "<category>")]
 pub fn post_category(category: Json<PostCategory>, auth: Authentication) -> Json<Category> {

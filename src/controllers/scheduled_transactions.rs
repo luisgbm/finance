@@ -1,5 +1,5 @@
-use crate::db_scheduled_transactions::DatabaseScheduledTransactions;
-use crate::models_routes::GetScheduledTransaction;
+use crate::database::scheduled_transactions::DatabaseScheduledTransactions;
+use crate::routes::models::GetScheduledTransaction;
 use crate::utils;
 
 pub fn get_all_scheduled_transactions(user_id: i32) -> Option<Vec<GetScheduledTransaction>> {

@@ -3,15 +3,15 @@ use rocket::http::Status;
 use rocket::Route;
 use rocket_contrib::json::Json;
 
-use crate::auth_guard::Authentication;
-use crate::controller_scheduled_transactions;
-use crate::db_accounts::DatabaseAccounts;
-use crate::db_categories::DatabaseCategories;
-use crate::db_scheduled_transactions::DatabaseScheduledTransactions;
-use crate::db_transactions::DatabaseTransactions;
-use crate::db_transfers::DatabaseTransfers;
-use crate::models_db::{NewScheduledTransaction, NewTransaction, NewTransfer, ScheduledTransaction, ScheduledTransactionKinds};
-use crate::models_routes::{GetScheduledTransaction, PatchScheduledTransaction, PostScheduledTransaction, PostScheduledTransactionPay};
+use crate::controllers;
+use crate::database::accounts::DatabaseAccounts;
+use crate::database::categories::DatabaseCategories;
+use crate::database::models::{NewScheduledTransaction, NewTransaction, NewTransfer, ScheduledTransaction, ScheduledTransactionKinds};
+use crate::database::scheduled_transactions::DatabaseScheduledTransactions;
+use crate::database::transactions::DatabaseTransactions;
+use crate::database::transfers::DatabaseTransfers;
+use crate::routes::auth_guard::Authentication;
+use crate::routes::models::{GetScheduledTransaction, PatchScheduledTransaction, PostScheduledTransaction, PostScheduledTransactionPay};
 use crate::utils;
 
 #[post("/scheduled-transactions/<scheduled_transaction_id>/pay", format = "json", data = "<scheduled_transasction_pay>")]
@@ -302,7 +302,7 @@ pub fn patch_scheduled_transaction(id: i32, scheduled_transaction_patch: Json<Pa
 
 #[get("/scheduled-transactions")]
 pub fn get_scheduled_transactions(auth: Authentication) -> Result<Json<Vec<GetScheduledTransaction>>, Status> {
-    if let Some(scheduled_transactions) = controller_scheduled_transactions::get_all_scheduled_transactions(auth.token.claims.user_id) {
+    if let Some(scheduled_transactions) = controllers::scheduled_transactions::get_all_scheduled_transactions(auth.token.claims.user_id) {
         return Ok(Json(scheduled_transactions));
     }
 

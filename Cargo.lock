@@ -329,7 +329,7 @@ dependencies = [
 
 [[package]]
 name = "finance"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
     "chrono",
     "chronoutil",
@@ -340,8 +340,8 @@ dependencies = [
     "rocket",
     "rocket_contrib",
     "rocket_cors",
- "serde",
- "serde_json",
+    "serde",
+    "serde_json",
 ]
 
 [[package]]

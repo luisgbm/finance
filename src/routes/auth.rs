@@ -4,19 +4,16 @@ use rocket::http::Status;
 use rocket::Route;
 use rocket_contrib::json::Json;
 
-use crate::auth_guard::Authentication;
-use crate::controller_accounts;
-use crate::controller_auth;
-use crate::controller_categories;
-use crate::controller_scheduled_transactions;
-use crate::db_auth::DatabaseAuth;
-use crate::jwt;
-use crate::models_db::NewAppUser;
-use crate::models_routes::InitialData;
+use crate::controllers;
+use crate::database::auth::DatabaseAuth;
+use crate::database::models::NewAppUser;
+use crate::routes::auth_guard::Authentication;
+use crate::routes::models::InitialData;
+use crate::utils::jwt;
 
 #[post("/login", format = "json", data = "<user>")]
 pub fn login(user: Json<NewAppUser>) -> Result<Json<InitialData>, Status> {
-    if let Some(initial_data) = controller_auth::login(&user.into_inner()) {
+    if let Some(initial_data) = controllers::auth::login(&user.into_inner()) {
         return Ok(Json(initial_data));
     }
 
@@ -29,9 +26,9 @@ pub fn validate_token(auth: Authentication) -> Json<InitialData> {
 
     Json(InitialData {
         token: jwt::create_jwt(user_id),
-        accounts: controller_accounts::get_all_accounts(user_id),
-        categories: controller_categories::get_all_categories(user_id),
-        scheduled_transactions: controller_scheduled_transactions::get_all_scheduled_transactions(user_id).expect("Error loading scheduled transactions")
+        accounts: controllers::accounts::get_all_accounts(user_id),
+        categories: controllers::categories::get_all_categories(user_id),
+        scheduled_transactions: controllers::scheduled_transactions::get_all_scheduled_transactions(user_id).expect("Error loading scheduled transactions"),
     })
 }
 
@@ -46,7 +43,7 @@ pub fn post_user(user_json: Json<NewAppUser>) -> Result<Json<InitialData>, Statu
                 password: user_json.password,
             };
 
-            if let Some(initial_data) = controller_auth::login(&new_app_user) {
+            if let Some(initial_data) = controllers::auth::login(&new_app_user) {
                 Ok(Json(initial_data))
             } else {
                 Err(Status::Unauthorized)

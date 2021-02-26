@@ -4,8 +4,8 @@ use rocket::http::Status;
 use rocket::outcome::Outcome::*;
 use rocket::request::{self, FromRequest, Request};
 
-use crate::jwt;
-use crate::jwt::Claims;
+use crate::utils::jwt;
+use crate::utils::jwt::Claims;
 
 #[derive(Debug)]
 pub struct Authentication {

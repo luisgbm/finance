@@ -3,11 +3,11 @@ use rocket::http::Status;
 use rocket::Route;
 use rocket_contrib::json::Json;
 
-use crate::auth_guard::Authentication;
-use crate::controller_accounts;
-use crate::db_accounts::DatabaseAccounts;
-use crate::models_db::{Account, NewAccount};
-use crate::models_routes::{GetAccount, PatchAccount, PostAccount};
+use crate::controllers;
+use crate::database::accounts::DatabaseAccounts;
+use crate::database::models::{Account, NewAccount};
+use crate::routes::auth_guard::Authentication;
+use crate::routes::models::{GetAccount, PatchAccount, PostAccount};
 use crate::utils;
 
 #[post("/accounts", format = "json", data = "<account>")]
@@ -29,12 +29,12 @@ pub fn post_account(account: Json<PostAccount>, auth: Authentication) -> Json<Ge
 
 #[get("/accounts")]
 pub fn get_accounts(auth: Authentication) -> Json<Vec<GetAccount>> {
-    Json(controller_accounts::get_all_accounts(auth.token.claims.user_id))
+    Json(controllers::accounts::get_all_accounts(auth.token.claims.user_id))
 }
 
 #[get("/accounts/<id>")]
 pub fn get_account_with_id(id: i32, auth: Authentication) -> Result<Json<GetAccount>, Status> {
-    if let Some(account) = controller_accounts::get_account(id, auth.token.claims.user_id) {
+    if let Some(account) = controllers::accounts::get_account(id, auth.token.claims.user_id) {
         return Ok(Json(account));
     }
 

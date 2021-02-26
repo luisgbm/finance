@@ -1,8 +1,8 @@
 use diesel::prelude::*;
 use diesel::result::Error;
 
-use crate::db_finance::FinanceDB;
-use crate::models_db::{NewTransfer, Transfer};
+use crate::database::finance::FinanceDB;
+use crate::database::models::{NewTransfer, Transfer};
 
 pub struct DatabaseTransfers {
     connection: FinanceDB
@@ -16,7 +16,7 @@ impl DatabaseTransfers {
     }
 
     pub fn new_transfer(&self, new_transfer: &NewTransfer) -> Transfer {
-        use crate::schema::transfers;
+        use crate::database::schema::transfers;
 
         diesel::insert_into(transfers::table)
             .values(new_transfer)
@@ -25,7 +25,7 @@ impl DatabaseTransfers {
     }
 
     pub fn get_transfers_from_account(&self, from_account: i32, app_user_id: i32) -> Vec<Transfer> {
-        use crate::schema::transfers::dsl::*;
+        use crate::database::schema::transfers::dsl::*;
 
         transfers
             .filter(user_id.eq(app_user_id))
@@ -35,7 +35,7 @@ impl DatabaseTransfers {
     }
 
     pub fn get_transfers_to_account(&self, to_account: i32, app_user_id: i32) -> Vec<Transfer> {
-        use crate::schema::transfers::dsl::*;
+        use crate::database::schema::transfers::dsl::*;
 
         transfers
             .filter(user_id.eq(app_user_id))
@@ -45,7 +45,7 @@ impl DatabaseTransfers {
     }
 
     pub fn get_transfer(&self, find_id: i32, app_user_id: i32) -> Result<Transfer, Error> {
-        use crate::schema::transfers::dsl::*;
+        use crate::database::schema::transfers::dsl::*;
 
         transfers
             .filter(user_id.eq(app_user_id))
@@ -54,7 +54,7 @@ impl DatabaseTransfers {
     }
 
     pub fn update_transfer(&self, update_id: i32, update_transfer: &NewTransfer, app_user_id: i32) -> Result<Transfer, Error> {
-        use crate::schema::transfers::dsl::*;
+        use crate::database::schema::transfers::dsl::*;
 
         diesel::update(transfers.filter(user_id.eq(app_user_id)).find(update_id))
             .set((
@@ -68,7 +68,7 @@ impl DatabaseTransfers {
     }
 
     pub fn delete_transfer(&self, delete_id: i32, app_user_id: i32) -> Result<Transfer, Error> {
-        use crate::schema::transfers::dsl::*;
+        use crate::database::schema::transfers::dsl::*;
 
         diesel::delete(transfers.filter(user_id.eq(app_user_id)).find(delete_id))
             .get_result::<Transfer>(&self.connection.db_connection)

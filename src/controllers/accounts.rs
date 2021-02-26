@@ -1,5 +1,5 @@
-use crate::db_accounts::DatabaseAccounts;
-use crate::models_routes::GetAccount;
+use crate::database::accounts::DatabaseAccounts;
+use crate::routes::models::GetAccount;
 use crate::utils;
 
 pub fn get_all_accounts(user_id: i32) -> Vec<GetAccount> {

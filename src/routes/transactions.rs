@@ -3,13 +3,13 @@ use rocket::http::Status;
 use rocket::Route;
 use rocket_contrib::json::Json;
 
-use crate::auth_guard::Authentication;
-use crate::db_accounts::DatabaseAccounts;
-use crate::db_categories::DatabaseCategories;
-use crate::db_transactions::DatabaseTransactions;
-use crate::db_transfers::DatabaseTransfers;
-use crate::models_db::{CategoryTypes, NewTransaction, Transaction};
-use crate::models_routes::{PatchTransaction, PostTransaction, TransactionTransferJoined};
+use crate::database::accounts::DatabaseAccounts;
+use crate::database::categories::DatabaseCategories;
+use crate::database::models::{CategoryTypes, NewTransaction, Transaction};
+use crate::database::transactions::DatabaseTransactions;
+use crate::database::transfers::DatabaseTransfers;
+use crate::routes::auth_guard::Authentication;
+use crate::routes::models::{PatchTransaction, PostTransaction, TransactionTransferJoined};
 use crate::utils;
 
 #[post("/transactions/account/<account_id>", format = "json", data = "<transaction>")]

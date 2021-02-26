@@ -3,11 +3,11 @@ use rocket::http::Status;
 use rocket::Route;
 use rocket_contrib::json::Json;
 
-use crate::auth_guard::Authentication;
-use crate::db_accounts::DatabaseAccounts;
-use crate::db_transfers::DatabaseTransfers;
-use crate::models_db::{NewTransfer, Transfer};
-use crate::models_routes::{PatchTransfer, PostTransfer};
+use crate::database::accounts::DatabaseAccounts;
+use crate::database::models::{NewTransfer, Transfer};
+use crate::database::transfers::DatabaseTransfers;
+use crate::routes::auth_guard::Authentication;
+use crate::routes::models::{PatchTransfer, PostTransfer};
 
 #[post("/transfers/from/<origin_account>/to/<destination_account>", format = "json", data = "<new_transfer>")]
 pub fn post_transfer(origin_account: i32, destination_account: i32, new_transfer: Json<PostTransfer>, auth: Authentication) -> Result<Json<Transfer>, Status> {

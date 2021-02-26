@@ -1,7 +1,7 @@
 use diesel::prelude::*;
 
-use crate::db_finance::FinanceDB;
-use crate::models_db::{NewScheduledTransaction, ScheduledTransaction};
+use crate::database::finance::FinanceDB;
+use crate::database::models::{NewScheduledTransaction, ScheduledTransaction};
 
 pub struct DatabaseScheduledTransactions {
     connection: FinanceDB
@@ -15,7 +15,7 @@ impl DatabaseScheduledTransactions {
     }
 
     pub fn new_scheduled_transaction(&self, new_scheduled_transaction: &NewScheduledTransaction) -> ScheduledTransaction {
-        use crate::schema::scheduled_transactions;
+        use crate::database::schema::scheduled_transactions;
 
         diesel::insert_into(scheduled_transactions::table)
             .values(new_scheduled_transaction)
@@ -24,8 +24,8 @@ impl DatabaseScheduledTransactions {
     }
 
     pub fn get_all_scheduled_transactions(&self, app_user_id: i32) -> Vec<ScheduledTransaction> {
-        use crate::schema::scheduled_transactions::dsl::*;
-        use crate::schema::scheduled_transactions;
+        use crate::database::schema::scheduled_transactions::dsl::*;
+        use crate::database::schema::scheduled_transactions;
 
         scheduled_transactions::table
             .filter(user_id.eq(app_user_id))
@@ -35,8 +35,8 @@ impl DatabaseScheduledTransactions {
     }
 
     pub fn get_scheduled_transaction(&self, find_id: i32, app_user_id: i32) -> QueryResult<ScheduledTransaction> {
-        use crate::schema::scheduled_transactions::dsl::*;
-        use crate::schema::scheduled_transactions;
+        use crate::database::schema::scheduled_transactions::dsl::*;
+        use crate::database::schema::scheduled_transactions;
 
         scheduled_transactions::table
             .filter(user_id.eq(app_user_id))
@@ -45,7 +45,7 @@ impl DatabaseScheduledTransactions {
     }
 
     pub fn update_scheduled_transaction(&self, update_id: i32, update_scheduled_transaction: &NewScheduledTransaction, app_user_id: i32) -> QueryResult<ScheduledTransaction> {
-        use crate::schema::scheduled_transactions::dsl::*;
+        use crate::database::schema::scheduled_transactions::dsl::*;
 
         diesel::update(scheduled_transactions.filter(user_id.eq(app_user_id)).find(update_id))
             .set((
@@ -69,7 +69,7 @@ impl DatabaseScheduledTransactions {
     }
 
     pub fn delete_scheduled_transaction(&self, delete_id: i32, app_user_id: i32) -> QueryResult<ScheduledTransaction> {
-        use crate::schema::scheduled_transactions::dsl::*;
+        use crate::database::schema::scheduled_transactions::dsl::*;
 
         diesel::delete(scheduled_transactions.filter(user_id.eq(app_user_id)).find(delete_id))
             .get_result::<ScheduledTransaction>(&self.connection.db_connection)

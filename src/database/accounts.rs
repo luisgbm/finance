@@ -1,8 +1,8 @@
 use diesel::prelude::*;
 use diesel::result::Error;
 
-use crate::db_finance::FinanceDB;
-use crate::models_db::{Account, NewAccount};
+use crate::database::finance::FinanceDB;
+use crate::database::models::{Account, NewAccount};
 
 pub struct DatabaseAccounts {
     connection: FinanceDB
@@ -16,7 +16,7 @@ impl DatabaseAccounts {
     }
 
     pub fn new_account(&self, new_account: &NewAccount) -> Account {
-        use crate::schema::accounts;
+        use crate::database::schema::accounts;
 
         diesel::insert_into(accounts::table)
             .values(new_account)
@@ -25,7 +25,7 @@ impl DatabaseAccounts {
     }
 
     pub fn get_all_accounts(&self, app_user_id: i32) -> Vec<Account> {
-        use crate::schema::accounts::dsl::*;
+        use crate::database::schema::accounts::dsl::*;
 
         accounts
             .filter(user_id.eq(app_user_id))
@@ -34,7 +34,7 @@ impl DatabaseAccounts {
     }
 
     pub fn get_account(&self, find_id: i32, app_user_id: i32) -> Result<Account, Error> {
-        use crate::schema::accounts::dsl::*;
+        use crate::database::schema::accounts::dsl::*;
 
         accounts
             .filter(user_id.eq(app_user_id))
@@ -43,7 +43,7 @@ impl DatabaseAccounts {
     }
 
     pub fn update_account(&self, update_id: i32, update_account: &NewAccount, app_user_id: i32) -> Result<Account, Error> {
-        use crate::schema::accounts::dsl::*;
+        use crate::database::schema::accounts::dsl::*;
 
         diesel::update(accounts.filter(user_id.eq(app_user_id)).find(update_id))
             .set(name.eq(update_account.name))
@@ -51,7 +51,7 @@ impl DatabaseAccounts {
     }
 
     pub fn delete_account(&self, delete_id: i32, app_user_id: i32) -> Result<Account, Error> {
-        use crate::schema::accounts::dsl::*;
+        use crate::database::schema::accounts::dsl::*;
 
         diesel::delete(accounts.filter(user_id.eq(app_user_id)).find(delete_id))
             .get_result::<Account>(&self.connection.db_connection)

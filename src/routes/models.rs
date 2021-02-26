@@ -1,7 +1,7 @@
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 
-use crate::models_db::{Category, CategoryTypes, RepeatFrequencies, ScheduledTransactionKinds};
+use crate::database::models::{Category, CategoryTypes, RepeatFrequencies, ScheduledTransactionKinds};
 
 #[derive(Serialize, Deserialize)]
 pub struct InitialData {

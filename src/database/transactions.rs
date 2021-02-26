@@ -1,8 +1,8 @@
 use diesel::prelude::*;
 use diesel::result::Error;
 
-use crate::db_finance::FinanceDB;
-use crate::models_db::{Account, Category, NewTransaction, Transaction};
+use crate::database::finance::FinanceDB;
+use crate::database::models::{Account, Category, NewTransaction, Transaction};
 
 pub struct DatabaseTransactions {
     connection: FinanceDB
@@ -16,7 +16,7 @@ impl DatabaseTransactions {
     }
 
     pub fn new_transaction(&self, new_transaction: &NewTransaction) -> Transaction {
-        use crate::schema::transactions;
+        use crate::database::schema::transactions;
 
         diesel::insert_into(transactions::table)
             .values(new_transaction)
@@ -25,10 +25,10 @@ impl DatabaseTransactions {
     }
 
     pub fn get_all_transactions_of_account_joined(&self, account_id: i32, app_user_id: i32) -> Vec<(Transaction, Category, Account)> {
-        use crate::schema::transactions::dsl::*;
-        use crate::schema::transactions;
-        use crate::schema::categories;
-        use crate::schema::accounts;
+        use crate::database::schema::transactions::dsl::*;
+        use crate::database::schema::transactions;
+        use crate::database::schema::categories;
+        use crate::database::schema::accounts;
 
         transactions::table.inner_join(categories::table).inner_join(accounts::table)
             .filter(user_id.eq(app_user_id))
@@ -39,10 +39,10 @@ impl DatabaseTransactions {
     }
 
     pub fn get_transaction(&self, find_id: i32, app_user_id: i32) -> Result<(Transaction, Category, Account), Error> {
-        use crate::schema::transactions::dsl::*;
-        use crate::schema::transactions;
-        use crate::schema::categories;
-        use crate::schema::accounts;
+        use crate::database::schema::transactions::dsl::*;
+        use crate::database::schema::transactions;
+        use crate::database::schema::categories;
+        use crate::database::schema::accounts;
 
         transactions::table.inner_join(categories::table).inner_join(accounts::table)
             .filter(user_id.eq(app_user_id))
@@ -51,7 +51,7 @@ impl DatabaseTransactions {
     }
 
     pub fn update_transaction(&self, update_id: i32, update_transaction: &NewTransaction, app_user_id: i32) -> Result<Transaction, Error> {
-        use crate::schema::transactions::dsl::*;
+        use crate::database::schema::transactions::dsl::*;
 
         diesel::update(transactions.filter(user_id.eq(app_user_id)).find(update_id))
             .set((
@@ -65,7 +65,7 @@ impl DatabaseTransactions {
     }
 
     pub fn delete_transaction(&self, delete_id: i32, app_user_id: i32) -> Result<Transaction, Error> {
-        use crate::schema::transactions::dsl::*;
+        use crate::database::schema::transactions::dsl::*;
 
         diesel::delete(transactions.filter(user_id.eq(app_user_id)).find(delete_id))
             .get_result::<Transaction>(&self.connection.db_connection)

@@ -281,7 +281,7 @@ pub fn patch_scheduled_transaction(id: i32, scheduled_transaction_patch: Json<Pa
         return Err(Status::BadRequest);
     }
 
-    let mut new_scheduled_transaction = new_scheduled_transaction.unwrap();
+    let new_scheduled_transaction = new_scheduled_transaction.unwrap();
 
     let updated_scheduled_transaction = DatabaseScheduledTransactions::new().update_scheduled_transaction(id, &new_scheduled_transaction, auth.token.claims.user_id);
 

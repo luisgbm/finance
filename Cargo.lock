@@ -329,17 +329,17 @@ dependencies = [
 
 [[package]]
 name = "finance"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
- "chrono",
- "chronoutil",
- "diesel",
- "diesel-derive-enum",
- "dotenv",
- "jsonwebtoken",
- "rocket",
- "rocket_contrib",
- "rocket_cors",
+    "chrono",
+    "chronoutil",
+    "diesel",
+    "diesel-derive-enum",
+    "dotenv",
+    "jsonwebtoken",
+    "rocket",
+    "rocket_contrib",
+    "rocket_cors",
  "serde",
  "serde_json",
 ]

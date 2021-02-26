@@ -273,7 +273,7 @@ pub fn patch_scheduled_transaction(id: i32, scheduled_transaction_patch: Json<Pa
         return Err(Status::NotFound);
     }
 
-    let scheduled_transaction = scheduled_transaction.unwrap();
+    let _scheduled_transaction = scheduled_transaction.unwrap();
 
     let new_scheduled_transaction = internal_get_new_scheduled_transaction_for_post_patch(&scheduled_transaction_patch, &auth);
 
@@ -282,10 +282,6 @@ pub fn patch_scheduled_transaction(id: i32, scheduled_transaction_patch: Json<Pa
     }
 
     let mut new_scheduled_transaction = new_scheduled_transaction.unwrap();
-
-    if new_scheduled_transaction.repeat == true {
-        new_scheduled_transaction.current_repeat_count = scheduled_transaction.current_repeat_count;
-    }
 
     let updated_scheduled_transaction = DatabaseScheduledTransactions::new().update_scheduled_transaction(id, &new_scheduled_transaction, auth.token.claims.user_id);
 

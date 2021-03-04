@@ -8,6 +8,7 @@ pub mod scheduled_transactions;
 pub mod transactions;
 pub mod transfers;
 pub mod auth_guard;
+pub mod db_pool;
 
 pub fn get_all_routes() -> Vec<Route> {
     let mut all_routes = Vec::new();

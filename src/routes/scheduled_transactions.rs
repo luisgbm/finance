@@ -1,22 +1,19 @@
+use diesel::PgConnection;
 use rocket;
 use rocket::http::Status;
 use rocket::Route;
 use rocket_contrib::json::Json;
 
 use crate::controllers;
-use crate::database::accounts::DatabaseAccounts;
-use crate::database::categories::DatabaseCategories;
 use crate::database::models::{NewScheduledTransaction, NewTransaction, NewTransfer, ScheduledTransaction, ScheduledTransactionKinds};
-use crate::database::scheduled_transactions::DatabaseScheduledTransactions;
-use crate::database::transactions::DatabaseTransactions;
-use crate::database::transfers::DatabaseTransfers;
 use crate::routes::auth_guard::Authentication;
+use crate::routes::db_pool::FinancePgDatabase;
 use crate::routes::models::{GetScheduledTransaction, PatchScheduledTransaction, PostScheduledTransaction, PostScheduledTransactionPay};
 use crate::utils;
 
 #[post("/scheduled-transactions/<scheduled_transaction_id>/pay", format = "json", data = "<scheduled_transasction_pay>")]
-pub fn post_scheduled_transaction_pay(scheduled_transaction_id: i32, scheduled_transasction_pay: Json<PostScheduledTransactionPay>, auth: Authentication) -> Result<Json<ScheduledTransaction>, Status> {
-    let scheduled_transaction = DatabaseScheduledTransactions::new().get_scheduled_transaction(scheduled_transaction_id, auth.token.claims.user_id);
+pub fn post_scheduled_transaction_pay(scheduled_transaction_id: i32, scheduled_transasction_pay: Json<PostScheduledTransactionPay>, auth: Authentication, connection: FinancePgDatabase) -> Result<Json<ScheduledTransaction>, Status> {
+    let scheduled_transaction = crate::database::scheduled_transactions::get_scheduled_transaction(scheduled_transaction_id, auth.token.claims.user_id, &*connection);
 
     if let Err(_) = scheduled_transaction {
         return Err(Status::NotFound);
@@ -30,11 +27,11 @@ pub fn post_scheduled_transaction_pay(scheduled_transaction_id: i32, scheduled_t
                 return Err(Status::BadRequest);
             }
 
-            if let Err(_) = DatabaseAccounts::new().get_account(scheduled_transasction_pay.account_id.unwrap(), auth.token.claims.user_id) {
+            if let Err(_) = crate::database::accounts::get_account(scheduled_transasction_pay.account_id.unwrap(), auth.token.claims.user_id, &*connection) {
                 return Err(Status::NotFound);
             }
 
-            if let Err(_) = DatabaseCategories::new().get_category(scheduled_transasction_pay.category_id.unwrap(), auth.token.claims.user_id) {
+            if let Err(_) = crate::database::categories::get_category(scheduled_transasction_pay.category_id.unwrap(), auth.token.claims.user_id, &*connection) {
                 return Err(Status::NotFound);
             }
 
@@ -47,18 +44,18 @@ pub fn post_scheduled_transaction_pay(scheduled_transaction_id: i32, scheduled_t
                 user_id: auth.token.claims.user_id,
             };
 
-            DatabaseTransactions::new().new_transaction(&new_transaction);
+            crate::database::transactions::new_transaction(&new_transaction, &*connection);
         }
         ScheduledTransactionKinds::Transfer => {
             if scheduled_transasction_pay.origin_account_id.is_none() || scheduled_transasction_pay.destination_account_id.is_none() {
                 return Err(Status::BadRequest);
             }
 
-            if let Err(_) = DatabaseAccounts::new().get_account(scheduled_transasction_pay.origin_account_id.unwrap(), auth.token.claims.user_id) {
+            if let Err(_) = crate::database::accounts::get_account(scheduled_transasction_pay.origin_account_id.unwrap(), auth.token.claims.user_id, &*connection) {
                 return Err(Status::BadRequest);
             }
 
-            if let Err(_) = DatabaseAccounts::new().get_account(scheduled_transasction_pay.destination_account_id.unwrap(), auth.token.claims.user_id) {
+            if let Err(_) = crate::database::accounts::get_account(scheduled_transasction_pay.destination_account_id.unwrap(), auth.token.claims.user_id, &*connection) {
                 return Err(Status::BadRequest);
             }
 
@@ -71,18 +68,18 @@ pub fn post_scheduled_transaction_pay(scheduled_transaction_id: i32, scheduled_t
                 user_id: auth.token.claims.user_id,
             };
 
-            DatabaseTransfers::new().new_transfer(&new_transfer);
+            crate::database::transfers::new_transfer(&new_transfer, &*connection);
         }
     }
 
     if scheduled_transaction.repeat == false {
-        let deleted = DatabaseScheduledTransactions::new().delete_scheduled_transaction(scheduled_transaction_id, auth.token.claims.user_id);
+        let deleted = crate::database::scheduled_transactions::delete_scheduled_transaction(scheduled_transaction_id, auth.token.claims.user_id, &*connection);
         return Ok(Json(deleted.unwrap()));
     } else {
         let new_repeat_count = scheduled_transaction.current_repeat_count.unwrap() + 1;
 
         if scheduled_transaction.infinite_repeat.unwrap() == false && new_repeat_count >= scheduled_transaction.end_after_repeats.unwrap() {
-            let deleted = DatabaseScheduledTransactions::new().delete_scheduled_transaction(scheduled_transaction_id, auth.token.claims.user_id);
+            let deleted = crate::database::scheduled_transactions::delete_scheduled_transaction(scheduled_transaction_id, auth.token.claims.user_id, &*connection);
             return Ok(Json(deleted.unwrap()));
         }
 
@@ -113,14 +110,14 @@ pub fn post_scheduled_transaction_pay(scheduled_transaction_id: i32, scheduled_t
             user_id: auth.token.claims.user_id,
         };
 
-        match DatabaseScheduledTransactions::new().update_scheduled_transaction(scheduled_transaction_id, &scheduled_transaction_paid, auth.token.claims.user_id) {
+        match crate::database::scheduled_transactions::update_scheduled_transaction(scheduled_transaction_id, &scheduled_transaction_paid, auth.token.claims.user_id, &*connection) {
             Ok(updated) => Ok(Json(updated)),
             Err(_) => Err(Status::InternalServerError)
         }
     }
 }
 
-fn internal_get_new_scheduled_transaction_for_post_patch(scheduled_transaction: &Json<PostScheduledTransaction>, auth: &Authentication) -> Option<NewScheduledTransaction> {
+fn internal_get_new_scheduled_transaction_for_post_patch(scheduled_transaction: &Json<PostScheduledTransaction>, auth: &Authentication, connection: &PgConnection) -> Option<NewScheduledTransaction> {
     let mut new_scheduled_transaction = NewScheduledTransaction {
         kind: scheduled_transaction.kind,
         value: scheduled_transaction.value,
@@ -180,7 +177,7 @@ fn internal_get_new_scheduled_transaction_for_post_patch(scheduled_transaction: 
 
             let account_id = scheduled_transaction.account_id.unwrap();
 
-            let account = DatabaseAccounts::new().get_account(account_id, auth.token.claims.user_id);
+            let account = crate::database::accounts::get_account(account_id, auth.token.claims.user_id, connection);
 
             if let Err(_) = account {
                 return None;
@@ -194,7 +191,7 @@ fn internal_get_new_scheduled_transaction_for_post_patch(scheduled_transaction: 
 
             let category_id = scheduled_transaction.category_id.unwrap();
 
-            let category = DatabaseCategories::new().get_category(category_id, auth.token.claims.user_id);
+            let category = crate::database::categories::get_category(category_id, auth.token.claims.user_id, connection);
 
             if let Err(_) = category {
                 return None;
@@ -212,7 +209,7 @@ fn internal_get_new_scheduled_transaction_for_post_patch(scheduled_transaction: 
 
             let origin_account_id = scheduled_transaction.origin_account_id.unwrap();
 
-            let origin_account = DatabaseAccounts::new().get_account(origin_account_id, auth.token.claims.user_id);
+            let origin_account = crate::database::accounts::get_account(origin_account_id, auth.token.claims.user_id, connection);
 
             if let Err(_) = origin_account {
                 return None;
@@ -226,7 +223,7 @@ fn internal_get_new_scheduled_transaction_for_post_patch(scheduled_transaction: 
 
             let destination_account_id = scheduled_transaction.destination_account_id.unwrap();
 
-            let destination_account = DatabaseAccounts::new().get_account(destination_account_id, auth.token.claims.user_id);
+            let destination_account = crate::database::accounts::get_account(destination_account_id, auth.token.claims.user_id, connection);
 
             if let Err(_) = destination_account {
                 return None;
@@ -247,16 +244,16 @@ fn internal_get_new_scheduled_transaction_for_post_patch(scheduled_transaction: 
 }
 
 #[post("/scheduled-transactions", format = "json", data = "<scheduled_transaction>")]
-pub fn post_scheduled_transaction(scheduled_transaction: Json<PostScheduledTransaction>, auth: Authentication) -> Result<Json<GetScheduledTransaction>, Status> {
-    let new_scheduled_transaction = internal_get_new_scheduled_transaction_for_post_patch(&scheduled_transaction, &auth);
+pub fn post_scheduled_transaction(scheduled_transaction: Json<PostScheduledTransaction>, auth: Authentication, connection: FinancePgDatabase) -> Result<Json<GetScheduledTransaction>, Status> {
+    let new_scheduled_transaction = internal_get_new_scheduled_transaction_for_post_patch(&scheduled_transaction, &auth, &*connection);
 
     if new_scheduled_transaction.is_none() {
         return Err(Status::BadRequest);
     }
 
-    let new_scheduled_transaction = DatabaseScheduledTransactions::new().new_scheduled_transaction(&new_scheduled_transaction.unwrap());
+    let new_scheduled_transaction = crate::database::scheduled_transactions::new_scheduled_transaction(&new_scheduled_transaction.unwrap(), &*connection);
 
-    let get_scheduled_transaction = utils::create_scheduled_transaction_join(&new_scheduled_transaction);
+    let get_scheduled_transaction = utils::create_scheduled_transaction_join(&new_scheduled_transaction, &*connection);
 
     if get_scheduled_transaction.is_none() {
         return Err(Status::InternalServerError);
@@ -266,8 +263,8 @@ pub fn post_scheduled_transaction(scheduled_transaction: Json<PostScheduledTrans
 }
 
 #[patch("/scheduled-transactions/<id>", format = "json", data = "<scheduled_transaction_patch>")]
-pub fn patch_scheduled_transaction(id: i32, scheduled_transaction_patch: Json<PatchScheduledTransaction>, auth: Authentication) -> Result<Json<GetScheduledTransaction>, Status> {
-    let scheduled_transaction = DatabaseScheduledTransactions::new().get_scheduled_transaction(id, auth.token.claims.user_id);
+pub fn patch_scheduled_transaction(id: i32, scheduled_transaction_patch: Json<PatchScheduledTransaction>, auth: Authentication, connection: FinancePgDatabase) -> Result<Json<GetScheduledTransaction>, Status> {
+    let scheduled_transaction = crate::database::scheduled_transactions::get_scheduled_transaction(id, auth.token.claims.user_id, &*connection);
 
     if let Err(_) = scheduled_transaction {
         return Err(Status::NotFound);
@@ -275,7 +272,7 @@ pub fn patch_scheduled_transaction(id: i32, scheduled_transaction_patch: Json<Pa
 
     let _scheduled_transaction = scheduled_transaction.unwrap();
 
-    let new_scheduled_transaction = internal_get_new_scheduled_transaction_for_post_patch(&scheduled_transaction_patch, &auth);
+    let new_scheduled_transaction = internal_get_new_scheduled_transaction_for_post_patch(&scheduled_transaction_patch, &auth, &*connection);
 
     if new_scheduled_transaction.is_none() {
         return Err(Status::BadRequest);
@@ -283,7 +280,7 @@ pub fn patch_scheduled_transaction(id: i32, scheduled_transaction_patch: Json<Pa
 
     let new_scheduled_transaction = new_scheduled_transaction.unwrap();
 
-    let updated_scheduled_transaction = DatabaseScheduledTransactions::new().update_scheduled_transaction(id, &new_scheduled_transaction, auth.token.claims.user_id);
+    let updated_scheduled_transaction = crate::database::scheduled_transactions::update_scheduled_transaction(id, &new_scheduled_transaction, auth.token.claims.user_id, &*connection);
 
     if let Err(_) = updated_scheduled_transaction {
         return Err(Status::InternalServerError);
@@ -291,7 +288,7 @@ pub fn patch_scheduled_transaction(id: i32, scheduled_transaction_patch: Json<Pa
 
     let updated_scheduled_transaction = updated_scheduled_transaction.unwrap();
 
-    let get_scheduled_transaction = utils::create_scheduled_transaction_join(&updated_scheduled_transaction);
+    let get_scheduled_transaction = utils::create_scheduled_transaction_join(&updated_scheduled_transaction, &*connection);
 
     if get_scheduled_transaction.is_none() {
         return Err(Status::InternalServerError);
@@ -301,8 +298,8 @@ pub fn patch_scheduled_transaction(id: i32, scheduled_transaction_patch: Json<Pa
 }
 
 #[get("/scheduled-transactions")]
-pub fn get_scheduled_transactions(auth: Authentication) -> Result<Json<Vec<GetScheduledTransaction>>, Status> {
-    if let Some(scheduled_transactions) = controllers::scheduled_transactions::get_all_scheduled_transactions(auth.token.claims.user_id) {
+pub fn get_scheduled_transactions(auth: Authentication, connection: FinancePgDatabase) -> Result<Json<Vec<GetScheduledTransaction>>, Status> {
+    if let Some(scheduled_transactions) = controllers::scheduled_transactions::get_all_scheduled_transactions(auth.token.claims.user_id, &*connection) {
         return Ok(Json(scheduled_transactions));
     }
 
@@ -310,8 +307,8 @@ pub fn get_scheduled_transactions(auth: Authentication) -> Result<Json<Vec<GetSc
 }
 
 #[get("/scheduled-transactions/<id>")]
-pub fn get_scheduled_transaction_with_id(id: i32, auth: Authentication) -> Result<Json<GetScheduledTransaction>, Status> {
-    let scheduled_transaction = DatabaseScheduledTransactions::new().get_scheduled_transaction(id, auth.token.claims.user_id);
+pub fn get_scheduled_transaction_with_id(id: i32, auth: Authentication, connection: FinancePgDatabase) -> Result<Json<GetScheduledTransaction>, Status> {
+    let scheduled_transaction = crate::database::scheduled_transactions::get_scheduled_transaction(id, auth.token.claims.user_id, &*connection);
 
     if let Err(_) = scheduled_transaction {
         return Err(Status::NotFound);
@@ -319,7 +316,7 @@ pub fn get_scheduled_transaction_with_id(id: i32, auth: Authentication) -> Resul
 
     let scheduled_transaction = scheduled_transaction.unwrap();
 
-    let get_scheduled_transaction = utils::create_scheduled_transaction_join(&scheduled_transaction);
+    let get_scheduled_transaction = utils::create_scheduled_transaction_join(&scheduled_transaction, &*connection);
 
     if get_scheduled_transaction.is_none() {
         return Err(Status::InternalServerError);
@@ -329,8 +326,8 @@ pub fn get_scheduled_transaction_with_id(id: i32, auth: Authentication) -> Resul
 }
 
 #[delete("/scheduled-transactions/<id>")]
-pub fn delete_scheduled_transaction(id: i32, auth: Authentication) -> Result<Json<ScheduledTransaction>, Status> {
-    let scheduled_transaction = DatabaseScheduledTransactions::new().delete_scheduled_transaction(id, auth.token.claims.user_id);
+pub fn delete_scheduled_transaction(id: i32, auth: Authentication, connection: FinancePgDatabase) -> Result<Json<ScheduledTransaction>, Status> {
+    let scheduled_transaction = crate::database::scheduled_transactions::delete_scheduled_transaction(id, auth.token.claims.user_id, &*connection);
 
     if let Err(_) = scheduled_transaction {
         return Err(Status::NotFound);

@@ -1,11 +1,8 @@
 use chrono::{Duration, NaiveDateTime};
 use chronoutil::RelativeDuration;
+use diesel::PgConnection;
 
-use crate::database::accounts::DatabaseAccounts;
-use crate::database::categories::DatabaseCategories;
 use crate::database::models::{Account, Category, CategoryTypes, RepeatFrequencies, ScheduledTransaction, ScheduledTransactionKinds, Transaction, Transfer};
-use crate::database::transactions::DatabaseTransactions;
-use crate::database::transfers::DatabaseTransfers;
 use crate::routes::models::{GetScheduledTransaction, TransactionTransferJoined};
 
 pub mod jwt;
@@ -31,13 +28,13 @@ pub fn calculate_next_date(initial_date: NaiveDateTime, repeat: bool, repeat_fre
     }
 }
 
-pub fn create_transaction_from_transfer(transfer: &Transfer, category_type: CategoryTypes) -> TransactionTransferJoined {
+pub fn create_transaction_from_transfer(transfer: &Transfer, category_type: CategoryTypes, connection: &PgConnection) -> TransactionTransferJoined {
     let transfer_account_id = if category_type == CategoryTypes::Expense { transfer.origin_account } else { transfer.destination_account };
 
-    let acc = DatabaseAccounts::new().get_account(transfer_account_id, transfer.user_id)
+    let acc = crate::database::accounts::get_account(transfer_account_id, transfer.user_id, connection)
         .expect("Error getting account information");
 
-    let from_acc = DatabaseAccounts::new().get_account(transfer.origin_account, transfer.user_id)
+    let from_acc = crate::database::accounts::get_account(transfer.origin_account, transfer.user_id, connection)
         .expect("Error getting origin account information");
 
     let transaction = TransactionTransferJoined {
@@ -58,7 +55,7 @@ pub fn create_transaction_from_transfer(transfer: &Transfer, category_type: Cate
     transaction
 }
 
-pub fn create_scheduled_transaction_join(scheduled_transaction: &ScheduledTransaction) -> Option<GetScheduledTransaction> {
+pub fn create_scheduled_transaction_join(scheduled_transaction: &ScheduledTransaction, connection: &PgConnection) -> Option<GetScheduledTransaction> {
     let mut get_scheduled_transaction = GetScheduledTransaction {
         id: scheduled_transaction.id,
         kind: scheduled_transaction.kind,
@@ -94,7 +91,7 @@ pub fn create_scheduled_transaction_join(scheduled_transaction: &ScheduledTransa
                 return None;
             }
 
-            let account = DatabaseAccounts::new().get_account(scheduled_transaction.account_id.unwrap(), scheduled_transaction.user_id);
+            let account = crate::database::accounts::get_account(scheduled_transaction.account_id.unwrap(), scheduled_transaction.user_id, connection);
 
             if let Err(_) = account {
                 return None;
@@ -102,7 +99,7 @@ pub fn create_scheduled_transaction_join(scheduled_transaction: &ScheduledTransa
 
             let account = account.unwrap();
 
-            let category = DatabaseCategories::new().get_category(scheduled_transaction.category_id.unwrap(), scheduled_transaction.user_id);
+            let category = crate::database::categories::get_category(scheduled_transaction.category_id.unwrap(), scheduled_transaction.user_id, connection);
 
             if let Err(_) = category {
                 return None;
@@ -125,7 +122,7 @@ pub fn create_scheduled_transaction_join(scheduled_transaction: &ScheduledTransa
                 return None;
             }
 
-            let origin_account = DatabaseAccounts::new().get_account(scheduled_transaction.origin_account_id.unwrap(), scheduled_transaction.user_id);
+            let origin_account = crate::database::accounts::get_account(scheduled_transaction.origin_account_id.unwrap(), scheduled_transaction.user_id, connection);
 
             if let Err(_) = origin_account {
                 return None;
@@ -133,7 +130,7 @@ pub fn create_scheduled_transaction_join(scheduled_transaction: &ScheduledTransa
 
             let origin_account = origin_account.unwrap();
 
-            let destination_account = DatabaseAccounts::new().get_account(scheduled_transaction.destination_account_id.unwrap(), scheduled_transaction.user_id);
+            let destination_account = crate::database::accounts::get_account(scheduled_transaction.destination_account_id.unwrap(), scheduled_transaction.user_id, connection);
 
             if let Err(_) = destination_account {
                 return None;
@@ -172,10 +169,10 @@ pub fn create_transaction_join(tuple: &(Transaction, Category, Account), user_id
     }
 }
 
-pub fn get_account_balance(account_id: i32, user_id: i32) -> i32 {
+pub fn get_account_balance(account_id: i32, user_id: i32, connection: &PgConnection) -> i32 {
     let mut balance: i32 = 0;
 
-    let transactions = DatabaseTransactions::new().get_all_transactions_of_account_joined(account_id, user_id);
+    let transactions = crate::database::transactions::get_all_transactions_of_account_joined(account_id, user_id, connection);
 
     for transaction_tuple in &transactions {
         let transaction = &transaction_tuple.0;
@@ -188,13 +185,13 @@ pub fn get_account_balance(account_id: i32, user_id: i32) -> i32 {
         }
     }
 
-    let transfers_from = DatabaseTransfers::new().get_transfers_from_account(account_id, user_id);
+    let transfers_from = crate::database::transfers::get_transfers_from_account(account_id, user_id, connection);
 
     for transfer_from in &transfers_from {
         balance -= transfer_from.value;
     }
 
-    let transfers_to = DatabaseTransfers::new().get_transfers_to_account(account_id, user_id);
+    let transfers_to = crate::database::transfers::get_transfers_to_account(account_id, user_id, connection);
 
     for transfer_to in &transfers_to {
         balance += transfer_to.value;

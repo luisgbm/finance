@@ -5,15 +5,16 @@ use rocket::Route;
 use rocket_contrib::json::Json;
 
 use crate::controllers;
-use crate::database::auth::DatabaseAuth;
+use crate::database::auth::new_user;
 use crate::database::models::NewAppUser;
 use crate::routes::auth_guard::Authentication;
+use crate::routes::db_pool::FinancePgDatabase;
 use crate::routes::models::InitialData;
 use crate::utils::jwt;
 
 #[post("/login", format = "json", data = "<user>")]
-pub fn login(user: Json<NewAppUser>) -> Result<Json<InitialData>, Status> {
-    if let Some(initial_data) = controllers::auth::login(&user.into_inner()) {
+pub fn login(user: Json<NewAppUser>, connection: FinancePgDatabase) -> Result<Json<InitialData>, Status> {
+    if let Some(initial_data) = controllers::auth::login(&user.into_inner(), &*connection) {
         return Ok(Json(initial_data));
     }
 
@@ -21,20 +22,20 @@ pub fn login(user: Json<NewAppUser>) -> Result<Json<InitialData>, Status> {
 }
 
 #[get("/token")]
-pub fn validate_token(auth: Authentication) -> Json<InitialData> {
+pub fn validate_token(auth: Authentication, connection: FinancePgDatabase) -> Json<InitialData> {
     let user_id = auth.token.claims.user_id;
 
     Json(InitialData {
         token: jwt::create_jwt(user_id),
-        accounts: controllers::accounts::get_all_accounts(user_id),
-        categories: controllers::categories::get_all_categories(user_id),
-        scheduled_transactions: controllers::scheduled_transactions::get_all_scheduled_transactions(user_id).expect("Error loading scheduled transactions"),
+        accounts: controllers::accounts::get_all_accounts(user_id, &*connection),
+        categories: controllers::categories::get_all_categories(user_id, &*connection),
+        scheduled_transactions: controllers::scheduled_transactions::get_all_scheduled_transactions(user_id, &*connection).expect("Error loading scheduled transactions"),
     })
 }
 
 #[post("/users", format = "json", data = "<user_json>")]
-pub fn post_user(user_json: Json<NewAppUser>) -> Result<Json<InitialData>, Status> {
-    let result = DatabaseAuth::new().new_user(&user_json);
+pub fn post_user(user_json: Json<NewAppUser>, connection: FinancePgDatabase) -> Result<Json<InitialData>, Status> {
+    let result = new_user(&user_json, &*connection);
 
     match result {
         Ok(user) => {
@@ -43,7 +44,7 @@ pub fn post_user(user_json: Json<NewAppUser>) -> Result<Json<InitialData>, Statu
                 password: user_json.password,
             };
 
-            if let Some(initial_data) = controllers::auth::login(&new_app_user) {
+            if let Some(initial_data) = controllers::auth::login(&new_app_user, &*connection) {
                 Ok(Json(initial_data))
             } else {
                 Err(Status::Unauthorized)

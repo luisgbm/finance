@@ -7,8 +7,9 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-rocket = "0.4.6"
+rocket = "0.4.7"
 rocket_cors = "0.5.1"
+rocket_codegen = "0.4.7"
 serde_json = "1.0"
 dotenv = "0.15.0"
 jsonwebtoken = "7"
@@ -27,10 +28,10 @@ version = "1.0"
 features = ["derive"]
 
 [dependencies.rocket_contrib]
-version = "0.4.6"
+version = "0.4.7"
 default-features = false
-features = ["json"]
+features = ["json", "diesel_postgres_pool"]
 
 [dependencies.diesel]
 version = "1.4.5"
-features = ["postgres", "chrono"]
+features = ["postgres", "chrono", "r2d2"]

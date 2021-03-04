@@ -11,7 +11,6 @@ rocket = "0.4.7"
 rocket_cors = "0.5.1"
 rocket_codegen = "0.4.7"
 serde_json = "1.0"
-dotenv = "0.15.0"
 jsonwebtoken = "7"
 chronoutil = "0.2.1"
 

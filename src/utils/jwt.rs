@@ -2,7 +2,6 @@ use std::env;
 use std::str::FromStr;
 
 use chrono::prelude::*;
-use dotenv::dotenv;
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, TokenData, Validation};
 use jsonwebtoken::errors::Result;
 use serde::{Deserialize, Serialize};
@@ -49,8 +48,6 @@ mod jwt_numeric_date {
 }
 
 pub fn create_jwt(user_id: i32) -> String {
-    dotenv().ok();
-
     let jwt_validity_days = env::var("JWT_VALIDITY_DAYS")
         .expect("JWT_VALIDITY_DAYS must be set");
 
@@ -73,8 +70,6 @@ pub fn create_jwt(user_id: i32) -> String {
 }
 
 pub fn validate_jwt(token: &String) -> Result<TokenData<Claims>> {
-    dotenv().ok();
-
     let jwt_secret = env::var("JWT_SECRET")
         .expect("JWT_SECRET must be set");
 

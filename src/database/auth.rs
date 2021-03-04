@@ -2,7 +2,6 @@ use std::env;
 use std::str::FromStr;
 
 use diesel::prelude::*;
-use dotenv::dotenv;
 
 use crate::database::models::{AppUser, NewAppUser};
 
@@ -12,8 +11,6 @@ pub fn new_user(new_user: &NewAppUser, connection: &PgConnection) -> QueryResult
 
     sql_function!(fn gen_salt(salt_type: Text, iter: Integer) -> Text);
     sql_function!(fn crypt(password: Text, salt: Text) -> Text);
-
-    dotenv().ok();
 
     let bf_rounds = env::var("BF_ROUNDS")
         .expect("BF_ROUNDS must be set");

@@ -2,7 +2,6 @@
 
 #[macro_use]
 extern crate diesel;
-extern crate dotenv;
 #[macro_use]
 extern crate rocket;
 extern crate rocket_contrib;

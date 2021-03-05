@@ -8,7 +8,7 @@ use crate::routes::auth_guard::Authentication;
 use crate::routes::db_pool::FinancePgDatabase;
 use crate::routes::models::{PatchCategory, PostCategory};
 
-#[post("/categories", format = "json", data = "<category>")]
+#[post("/api/categories", format = "json", data = "<category>")]
 pub fn post_category(category: Json<PostCategory>, auth: Authentication, connection: FinancePgDatabase) -> Json<Category> {
     let new_category = NewCategory {
         categorytype: category.categorytype,
@@ -19,12 +19,12 @@ pub fn post_category(category: Json<PostCategory>, auth: Authentication, connect
     Json(crate::database::categories::new_category(&new_category, &*connection))
 }
 
-#[get("/categories")]
+#[get("/api/categories")]
 pub fn get_categories(auth: Authentication, connection: FinancePgDatabase) -> Json<Vec<Category>> {
     Json(crate::database::categories::get_all_categories(auth.token.claims.user_id, &*connection))
 }
 
-#[get("/categories/<id>")]
+#[get("/api/categories/<id>")]
 pub fn get_category_with_id(id: i32, auth: Authentication, connection: FinancePgDatabase) -> Result<Json<Category>, Status> {
     match crate::database::categories::get_category(id, auth.token.claims.user_id, &*connection) {
         Ok(category) => Ok(Json(category)),
@@ -32,17 +32,17 @@ pub fn get_category_with_id(id: i32, auth: Authentication, connection: FinancePg
     }
 }
 
-#[get("/categories/expense")]
+#[get("/api/categories/expense")]
 pub fn get_expense_categories(auth: Authentication, connection: FinancePgDatabase) -> Json<Vec<Category>> {
     Json(crate::database::categories::get_all_categories_by_type(CategoryTypes::Expense, auth.token.claims.user_id, &*connection))
 }
 
-#[get("/categories/income")]
+#[get("/api/categories/income")]
 pub fn get_income_categories(auth: Authentication, connection: FinancePgDatabase) -> Json<Vec<Category>> {
     Json(crate::database::categories::get_all_categories_by_type(CategoryTypes::Income, auth.token.claims.user_id, &*connection))
 }
 
-#[patch("/categories/<id>", format = "json", data = "<category>")]
+#[patch("/api/categories/<id>", format = "json", data = "<category>")]
 pub fn patch_category(id: i32, category: Json<PatchCategory>, auth: Authentication, connection: FinancePgDatabase) -> Result<Json<Category>, Status> {
     let category = NewCategory {
         categorytype: category.categorytype,
@@ -56,7 +56,7 @@ pub fn patch_category(id: i32, category: Json<PatchCategory>, auth: Authenticati
     }
 }
 
-#[delete("/categories/<id>")]
+#[delete("/api/categories/<id>")]
 pub fn delete_category(id: i32, auth: Authentication, connection: FinancePgDatabase) -> Result<Json<Category>, Status> {
     match crate::database::categories::delete_category(id, auth.token.claims.user_id, &*connection) {
         Ok(category) => Ok(Json(category)),

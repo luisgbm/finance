@@ -10,7 +10,7 @@ use crate::routes::db_pool::FinancePgDatabase;
 use crate::routes::models::{GetAccount, PatchAccount, PostAccount};
 use crate::utils;
 
-#[post("/accounts", format = "json", data = "<account>")]
+#[post("/api/accounts", format = "json", data = "<account>")]
 pub fn post_account(account: Json<PostAccount>, auth: Authentication, connection: FinancePgDatabase) -> Json<GetAccount> {
     let new_account = NewAccount {
         name: account.name.as_str(),
@@ -27,12 +27,12 @@ pub fn post_account(account: Json<PostAccount>, auth: Authentication, connection
     })
 }
 
-#[get("/accounts")]
+#[get("/api/accounts")]
 pub fn get_accounts(auth: Authentication, connection: FinancePgDatabase) -> Json<Vec<GetAccount>> {
     Json(controllers::accounts::get_all_accounts(auth.token.claims.user_id, &*connection))
 }
 
-#[get("/accounts/<id>")]
+#[get("/api/accounts/<id>")]
 pub fn get_account_with_id(id: i32, auth: Authentication, connection: FinancePgDatabase) -> Result<Json<GetAccount>, Status> {
     if let Some(account) = controllers::accounts::get_account(id, auth.token.claims.user_id, &*connection) {
         return Ok(Json(account));
@@ -41,7 +41,7 @@ pub fn get_account_with_id(id: i32, auth: Authentication, connection: FinancePgD
     Err(Status::NotFound)
 }
 
-#[patch("/accounts/<id>", format = "json", data = "<account>")]
+#[patch("/api/accounts/<id>", format = "json", data = "<account>")]
 pub fn patch_account(id: i32, account: Json<PatchAccount>, auth: Authentication, connection: FinancePgDatabase) -> Result<Json<GetAccount>, Status> {
     let account = account.into_inner();
 
@@ -63,7 +63,7 @@ pub fn patch_account(id: i32, account: Json<PatchAccount>, auth: Authentication,
     }
 }
 
-#[delete("/accounts/<id>")]
+#[delete("/api/accounts/<id>")]
 pub fn delete_account(id: i32, auth: Authentication, connection: FinancePgDatabase) -> Result<Json<Account>, Status> {
     match crate::database::accounts::delete_account(id, auth.token.claims.user_id, &*connection) {
         Ok(account) => Ok(Json(account)),

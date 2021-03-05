@@ -8,7 +8,7 @@ use crate::routes::auth_guard::Authentication;
 use crate::routes::db_pool::FinancePgDatabase;
 use crate::routes::models::{PatchTransfer, PostTransfer};
 
-#[post("/transfers/from/<origin_account>/to/<destination_account>", format = "json", data = "<new_transfer>")]
+#[post("/api/transfers/from/<origin_account>/to/<destination_account>", format = "json", data = "<new_transfer>")]
 pub fn post_transfer(origin_account: i32, destination_account: i32, new_transfer: Json<PostTransfer>, auth: Authentication, connection: FinancePgDatabase) -> Result<Json<Transfer>, Status> {
     match crate::database::accounts::get_account(origin_account, auth.token.claims.user_id, &*connection) {
         Ok(_) => {
@@ -34,7 +34,7 @@ pub fn post_transfer(origin_account: i32, destination_account: i32, new_transfer
     }
 }
 
-#[get("/transfers/<id>")]
+#[get("/api/transfers/<id>")]
 pub fn get_transfer_with_id(id: i32, auth: Authentication, connection: FinancePgDatabase) -> Result<Json<Transfer>, Status> {
     match crate::database::transfers::get_transfer(id, auth.token.claims.user_id, &*connection) {
         Ok(transfer) => Ok(Json(transfer)),
@@ -42,7 +42,7 @@ pub fn get_transfer_with_id(id: i32, auth: Authentication, connection: FinancePg
     }
 }
 
-#[patch("/transfers/<id>", format = "json", data = "<transfer>")]
+#[patch("/api/transfers/<id>", format = "json", data = "<transfer>")]
 pub fn patch_transfer(id: i32, transfer: Json<PatchTransfer>, auth: Authentication, connection: FinancePgDatabase) -> Result<Json<Transfer>, Status> {
     match crate::database::accounts::get_account(transfer.origin_account, auth.token.claims.user_id, &*connection) {
         Ok(_) => {
@@ -69,7 +69,7 @@ pub fn patch_transfer(id: i32, transfer: Json<PatchTransfer>, auth: Authenticati
     }
 }
 
-#[delete("/transfers/<id>")]
+#[delete("/api/transfers/<id>")]
 pub fn delete_transfer(id: i32, auth: Authentication, connection: FinancePgDatabase) -> Result<Json<Transfer>, Status> {
     match crate::database::transfers::delete_transfer(id, auth.token.claims.user_id, &*connection) {
         Ok(transfer) => Ok(Json(transfer)),

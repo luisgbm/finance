@@ -9,7 +9,7 @@ use crate::routes::db_pool::FinancePgDatabase;
 use crate::routes::models::{PatchTransaction, PostTransaction, TransactionTransferJoined};
 use crate::utils;
 
-#[post("/transactions/account/<account_id>", format = "json", data = "<transaction>")]
+#[post("/api/transactions/account/<account_id>", format = "json", data = "<transaction>")]
 pub fn post_transaction(account_id: i32, transaction: Json<PostTransaction>, auth: Authentication, connection: FinancePgDatabase) -> Result<Json<Transaction>, Status> {
     match crate::database::accounts::get_account(account_id, auth.token.claims.user_id, &*connection) {
         Ok(_) => {
@@ -33,7 +33,7 @@ pub fn post_transaction(account_id: i32, transaction: Json<PostTransaction>, aut
     }
 }
 
-#[get("/transactions/account/<account_id>")]
+#[get("/api/transactions/account/<account_id>")]
 pub fn get_transactions(account_id: i32, auth: Authentication, connection: FinancePgDatabase) -> Result<Json<Vec<TransactionTransferJoined>>, Status> {
     match crate::database::accounts::get_account(account_id, auth.token.claims.user_id, &*connection) {
         Ok(_) => {
@@ -66,7 +66,7 @@ pub fn get_transactions(account_id: i32, auth: Authentication, connection: Finan
     }
 }
 
-#[get("/transactions/<id>")]
+#[get("/api/transactions/<id>")]
 pub fn get_transaction_with_id(id: i32, auth: Authentication, connection: FinancePgDatabase) -> Result<Json<TransactionTransferJoined>, Status> {
     match crate::database::transactions::get_transaction(id, auth.token.claims.user_id, &*connection) {
         Ok(join) => Ok(Json(utils::create_transaction_join(&join, auth.token.claims.user_id))),
@@ -74,7 +74,7 @@ pub fn get_transaction_with_id(id: i32, auth: Authentication, connection: Financ
     }
 }
 
-#[patch("/transactions/<id>", format = "json", data = "<transaction>")]
+#[patch("/api/transactions/<id>", format = "json", data = "<transaction>")]
 pub fn patch_transaction(id: i32, transaction: Json<PatchTransaction>, auth: Authentication, connection: FinancePgDatabase) -> Result<Json<Transaction>, Status> {
     match crate::database::accounts::get_account(transaction.account, auth.token.claims.user_id, &*connection) {
         Ok(_) => {
@@ -101,7 +101,7 @@ pub fn patch_transaction(id: i32, transaction: Json<PatchTransaction>, auth: Aut
     }
 }
 
-#[delete("/transactions/<id>")]
+#[delete("/api/transactions/<id>")]
 pub fn delete_transaction(id: i32, auth: Authentication, connection: FinancePgDatabase) -> Result<Json<Transaction>, Status> {
     match crate::database::transactions::delete_transaction(id, auth.token.claims.user_id, &*connection) {
         Ok(transaction) => Ok(Json(transaction)),

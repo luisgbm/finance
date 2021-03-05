@@ -12,7 +12,7 @@ use crate::routes::db_pool::FinancePgDatabase;
 use crate::routes::models::InitialData;
 use crate::utils::jwt;
 
-#[post("/login", format = "json", data = "<user>")]
+#[post("/api/login", format = "json", data = "<user>")]
 pub fn login(user: Json<NewAppUser>, connection: FinancePgDatabase) -> Result<Json<InitialData>, Status> {
     if let Some(initial_data) = controllers::auth::login(&user.into_inner(), &*connection) {
         return Ok(Json(initial_data));
@@ -21,7 +21,7 @@ pub fn login(user: Json<NewAppUser>, connection: FinancePgDatabase) -> Result<Js
     Err(Status::Unauthorized)
 }
 
-#[get("/token")]
+#[get("/api/token")]
 pub fn validate_token(auth: Authentication, connection: FinancePgDatabase) -> Json<InitialData> {
     let user_id = auth.token.claims.user_id;
 
@@ -33,7 +33,7 @@ pub fn validate_token(auth: Authentication, connection: FinancePgDatabase) -> Js
     })
 }
 
-#[post("/users", format = "json", data = "<user_json>")]
+#[post("/api/users", format = "json", data = "<user_json>")]
 pub fn post_user(user_json: Json<NewAppUser>, connection: FinancePgDatabase) -> Result<Json<InitialData>, Status> {
     let result = new_user(&user_json, &*connection);
 

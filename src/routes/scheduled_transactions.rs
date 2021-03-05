@@ -11,7 +11,7 @@ use crate::routes::db_pool::FinancePgDatabase;
 use crate::routes::models::{GetScheduledTransaction, PatchScheduledTransaction, PostScheduledTransaction, PostScheduledTransactionPay};
 use crate::utils;
 
-#[post("/scheduled-transactions/<scheduled_transaction_id>/pay", format = "json", data = "<scheduled_transasction_pay>")]
+#[post("/api/scheduled-transactions/<scheduled_transaction_id>/pay", format = "json", data = "<scheduled_transasction_pay>")]
 pub fn post_scheduled_transaction_pay(scheduled_transaction_id: i32, scheduled_transasction_pay: Json<PostScheduledTransactionPay>, auth: Authentication, connection: FinancePgDatabase) -> Result<Json<ScheduledTransaction>, Status> {
     let scheduled_transaction = crate::database::scheduled_transactions::get_scheduled_transaction(scheduled_transaction_id, auth.token.claims.user_id, &*connection);
 
@@ -243,7 +243,7 @@ fn internal_get_new_scheduled_transaction_for_post_patch(scheduled_transaction: 
     Some(new_scheduled_transaction)
 }
 
-#[post("/scheduled-transactions", format = "json", data = "<scheduled_transaction>")]
+#[post("/api/scheduled-transactions", format = "json", data = "<scheduled_transaction>")]
 pub fn post_scheduled_transaction(scheduled_transaction: Json<PostScheduledTransaction>, auth: Authentication, connection: FinancePgDatabase) -> Result<Json<GetScheduledTransaction>, Status> {
     let new_scheduled_transaction = internal_get_new_scheduled_transaction_for_post_patch(&scheduled_transaction, &auth, &*connection);
 
@@ -262,7 +262,7 @@ pub fn post_scheduled_transaction(scheduled_transaction: Json<PostScheduledTrans
     Ok(Json(get_scheduled_transaction.unwrap()))
 }
 
-#[patch("/scheduled-transactions/<id>", format = "json", data = "<scheduled_transaction_patch>")]
+#[patch("/api/scheduled-transactions/<id>", format = "json", data = "<scheduled_transaction_patch>")]
 pub fn patch_scheduled_transaction(id: i32, scheduled_transaction_patch: Json<PatchScheduledTransaction>, auth: Authentication, connection: FinancePgDatabase) -> Result<Json<GetScheduledTransaction>, Status> {
     let scheduled_transaction = crate::database::scheduled_transactions::get_scheduled_transaction(id, auth.token.claims.user_id, &*connection);
 
@@ -297,7 +297,7 @@ pub fn patch_scheduled_transaction(id: i32, scheduled_transaction_patch: Json<Pa
     Ok(Json(get_scheduled_transaction.unwrap()))
 }
 
-#[get("/scheduled-transactions")]
+#[get("/api/scheduled-transactions")]
 pub fn get_scheduled_transactions(auth: Authentication, connection: FinancePgDatabase) -> Result<Json<Vec<GetScheduledTransaction>>, Status> {
     if let Some(scheduled_transactions) = controllers::scheduled_transactions::get_all_scheduled_transactions(auth.token.claims.user_id, &*connection) {
         return Ok(Json(scheduled_transactions));
@@ -306,7 +306,7 @@ pub fn get_scheduled_transactions(auth: Authentication, connection: FinancePgDat
     Err(Status::InternalServerError)
 }
 
-#[get("/scheduled-transactions/<id>")]
+#[get("/api/scheduled-transactions/<id>")]
 pub fn get_scheduled_transaction_with_id(id: i32, auth: Authentication, connection: FinancePgDatabase) -> Result<Json<GetScheduledTransaction>, Status> {
     let scheduled_transaction = crate::database::scheduled_transactions::get_scheduled_transaction(id, auth.token.claims.user_id, &*connection);
 
@@ -325,7 +325,7 @@ pub fn get_scheduled_transaction_with_id(id: i32, auth: Authentication, connecti
     Ok(Json(get_scheduled_transaction.unwrap()))
 }
 
-#[delete("/scheduled-transactions/<id>")]
+#[delete("/api/scheduled-transactions/<id>")]
 pub fn delete_scheduled_transaction(id: i32, auth: Authentication, connection: FinancePgDatabase) -> Result<Json<ScheduledTransaction>, Status> {
     let scheduled_transaction = crate::database::scheduled_transactions::delete_scheduled_transaction(id, auth.token.claims.user_id, &*connection);
 

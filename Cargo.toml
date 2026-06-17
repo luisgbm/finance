@@ -1,36 +1,22 @@
 [package]
 name = "finance"
-version = "1.0.2"
+version = "2.0.0"
 authors = ["Luís Mendes <luisgbm@gmail.com>"]
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
-rocket = "0.4.7"
-rocket_cors = "0.5.1"
-rocket_codegen = "0.4.7"
-serde_json = "1.0"
-jsonwebtoken = "7"
-chronoutil = "0.2.1"
-
-[dependencies.diesel-derive-enum]
-version = "1"
-features = ["postgres"]
-
-[dependencies.chrono]
-version = "0.4"
-features = ["serde"]
-
-[dependencies.serde]
-version = "1.0"
-features = ["derive"]
-
-[dependencies.rocket_contrib]
-version = "0.4.7"
-default-features = false
-features = ["json", "diesel_postgres_pool"]
-
-[dependencies.diesel]
-version = "1.4.5"
-features = ["postgres", "chrono", "r2d2"]
+axum = "0.8"
+tokio = { version = "1", features = ["full"] }
+tower = "0.5"
+tower-http = { version = "0.7", features = ["cors", "trace"] }
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "tls-rustls", "postgres", "chrono", "macros"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+chrono = { version = "0.4", features = ["serde"] }
+chronoutil = "0.2"
+jsonwebtoken = { version = "10", features = ["rust_crypto"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+thiserror = "2"
+anyhow = "1"
+dotenvy = "0.15"

@@ -1,3 +1,6 @@
 /target/
 *.iml
 /.idea/
+
+# Local environment file (contains JWT_SECRET) — use .env.example as a template
+.env

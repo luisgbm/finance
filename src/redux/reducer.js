@@ -1,4 +1,4 @@
-import {combineReducers} from 'redux'
+import {combineReducers} from '@reduxjs/toolkit'
 import {accountsReducer} from './accountsSlice';
 import {categoriesReducer} from './categoriesSlice';
 import {scheduledTransactionsReducer} from './scheduledTransactionsSlice';

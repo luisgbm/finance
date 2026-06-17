@@ -21,14 +21,14 @@ const scheduledTransferValidationSchema = yup.object({
         .string()
         .when('repeat', {
             is: true,
-            then: yup.string().required('Frequency is required')
+            then: (schema) => schema.required('Frequency is required')
         }),
     repeatInterval: yup
         .number()
         .moreThan(0, 'Interval must be greater than 0')
         .when('repeat', {
             is: true,
-            then: yup.number().required('Interval is required')
+            then: (schema) => schema.required('Interval is required')
         }),
     infiniteRepeat: yup
         .boolean(),
@@ -37,9 +37,9 @@ const scheduledTransferValidationSchema = yup.object({
         .moreThan(0, 'End After Repetitions must be greater than 0')
         .when('repeat', {
             is: true,
-            then: yup.string().when('infiniteRepeat', {
+            then: (schema) => schema.when('infiniteRepeat', {
                 is: false,
-                then: yup.string().required('End After Repetitions is required')
+                then: (s) => s.required('End After Repetitions is required')
             })
         })
 });

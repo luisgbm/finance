@@ -1,0 +1,25 @@
+# --- Local environment / data (machine-specific, not for version control) ---
+.pg/
+finance/.env
+financejs/.env*.local
+
+# Local dev helper scripts (machine-specific absolute paths)
+run_backend.ps1
+run_frontend.ps1
+run_postgres.cmd
+
+# Temporary history-import sources (safety guard; removed after the monorepo import)
+__backend_src/
+__frontend_src/
+
+# --- Build output / dependencies (safety net; each subproject also ignores these) ---
+finance/target/
+financejs/node_modules/
+financejs/dist/
+financejs/build/
+
+# --- Editor / OS ---
+.idea/
+.vscode/
+*.iml
+.DS_Store

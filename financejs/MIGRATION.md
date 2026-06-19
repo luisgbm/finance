@@ -176,7 +176,7 @@ The production build (`vite build`) succeeds with 0 warnings (aside from a bundl
 ## 9. Toolchain & infrastructure
 
 - **Node:** runs on Node 25 with no flags (Vite). The CRA `--openssl-legacy-provider` workaround is gone.
-- **Dev server:** `vite` on `http://localhost:3000` (`run_frontend.ps1`).
+- **Dev server:** `vite` on `http://localhost:3000` (run via Docker Compose).
 - **Fonts:** `@fontsource/roboto` v5 (per‑weight CSS imports: 300/400/500/700).
 - **No backend changes:** the frontend talks to the same Axum API on `:8000`.
 
@@ -194,15 +194,11 @@ The production build (`vite build`) succeeds with 0 warnings (aside from a bundl
 
 ## 11. Build & run
 
-```powershell
-cd financejs
-npm install
-npm run dev       # Vite dev server on http://localhost:3000 (uses .env.development -> :8000)
-npm run build     # production build to dist/
-npm run preview   # serve the production build
-```
-
-Configuration (API base URL) is read from `.env.development` / `.env.production` via `REACT_APP_API_BASE_URL`.
+The app now runs via **Docker Compose** from the repository root (`docker compose up --build`); the
+Vite dev server (with HMR) and its npm scripts run **inside** the container, and the backend + database
+come up alongside it. See the [frontend README](./README.md#run) and the
+[monorepo README](../README.md) for details. The browser‑facing API URL is configured via
+`REACT_APP_API_BASE_URL` (from the root `.env`'s `API_BASE_URL`).
 
 ---
 

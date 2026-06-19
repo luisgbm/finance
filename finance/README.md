@@ -88,59 +88,57 @@ Login / register / token‑refresh return an `InitialData` payload (`token`, `ac
 
 ## Prerequisites
 
-- **Rust** (stable) — install via [rustup](https://rustup.rs/).
-- **A C toolchain** for building `ring` (TLS):
-  - **Windows:** Visual Studio with the *Desktop development with C++* workload (provides `link.exe` + the Windows SDK).
-  - **Linux/macOS:** a standard C compiler (gcc/clang).
-- **PostgreSQL 16** with the `pgcrypto` extension available (ships with the standard `contrib` package).
+The backend runs as a container in the monorepo's Docker Compose stack — you do **not** need a local
+Rust toolchain, C compiler, or PostgreSQL to build or run it.
 
-> Note: SQLx uses a pure‑Rust Postgres driver, so **libpq is not required** at build or run time.
+- **Docker Engine + Compose v2** (or Docker Desktop). *(On this machine, Docker runs inside **WSL**.)*
+
+Everything else (the Rust release build, the Postgres database, the schema) is handled by Compose.
+See the [monorepo README](../README.md) for the one‑command quickstart.
+
+> SQLx uses a pure‑Rust Postgres driver and **runtime** queries (no compile‑time DB access and no
+> libpq), which is what keeps the Docker build fully self‑contained.
 
 ---
 
-## Database setup
+## Database
 
-Create the role and database, then apply the schema:
+You don't set up the database manually. The Compose `db` service runs `postgres:16`, creates the
+`finance` role and `financedb` database, and **auto‑applies the schema** on first boot by mounting
+[`migrations/2021-01-19-171757_finance/up.sql`](./migrations/2021-01-19-171757_finance/up.sql) into
+the Postgres init directory — it creates the `pgcrypto` extension, the enums, and all tables. Your
+data then persists in the `pgdata` volume between `docker compose up` / `down` runs (cleared only by
+`docker compose down -v`).
 
-```sql
--- as a Postgres superuser
-CREATE ROLE finance LOGIN PASSWORD 'finance';
-CREATE DATABASE financedb OWNER finance;
-```
-
-```bash
-# apply the schema (creates the pgcrypto extension, enums, and all tables)
-psql -U finance -d financedb -f migrations/2021-01-19-171757_finance/up.sql
-```
-
-The `migrations/00000000000000_diesel_initial_setup` folder is a legacy Diesel artifact and is
-optional. (If `CREATE EXTENSION pgcrypto` is denied, run that one statement as a superuser first.)
+The `migrations/00000000000000_diesel_initial_setup` folder is a legacy Diesel artifact and is unused.
 
 ---
 
 ## Configuration
 
-Configuration is read from environment variables (a local `.env` file is loaded automatically via
-`dotenvy`). Create `finance/.env`:
+The backend reads all configuration from **environment variables** (a `.env` file is also honored via
+`dotenvy`). In Docker these are set by the `backend` service in
+[`docker-compose.yml`](../docker-compose.yml); the secret and host ports come from the root `.env`
+(copied from `.env.example`):
 
-```dotenv
-DATABASE_URL=postgres://finance:finance@localhost:5432/financedb?sslmode=disable
-JWT_SECRET=change-me-to-a-long-random-secret
-JWT_VALIDITY_DAYS=30
-BF_ROUNDS=10
-BIND_ADDR=127.0.0.1
-PORT=8000
-# DB_POOL_SIZE=20
-RUST_LOG=finance=debug,tower_http=debug,info
+```yaml
+# docker-compose.yml → services.backend.environment
+DATABASE_URL: postgres://finance:finance@db:5432/financedb
+BIND_ADDR: 0.0.0.0          # listen on all interfaces inside the container
+PORT: 8000
+JWT_SECRET: ${JWT_SECRET}   # from the root .env
+JWT_VALIDITY_DAYS: 30
+BF_ROUNDS: 10
+RUST_LOG: finance=debug,tower_http=info,info
 ```
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
-| `DATABASE_URL` | yes | — | Postgres connection string |
+| `DATABASE_URL` | yes | — | Postgres connection string (in Compose: `…@db:5432/financedb`) |
 | `JWT_SECRET` | yes | — | HMAC secret for signing JWTs |
 | `JWT_VALIDITY_DAYS` | no | `30` | Token lifetime in days |
 | `BF_ROUNDS` | no | `10` | bcrypt cost for password hashing |
-| `BIND_ADDR` | no | `127.0.0.1` | Listen address |
+| `BIND_ADDR` | no | `127.0.0.1` | Listen address (Compose sets `0.0.0.0`) |
 | `PORT` | no | `8000` | Listen port |
 | `DB_POOL_SIZE` | no | `20` | Max DB pool connections |
 
@@ -148,21 +146,33 @@ RUST_LOG=finance=debug,tower_http=debug,info
 
 ## Build & run
 
+The backend is built and started by Compose together with its database — run from the **repository
+root**:
+
 ```bash
-cd finance
-cargo build
-cargo run        # serves http://127.0.0.1:8000
+docker compose up --build        # WSL: wsl docker compose up --build
 ```
 
-On **Windows**, make sure the MSVC build environment is on `PATH` (run from a *Developer PowerShell*,
-or call `vcvars64.bat` first) so the linker and `ring` build succeed.
+This builds the image from [`Dockerfile`](./Dockerfile) (a multi‑stage Rust → slim‑Debian build) and
+serves the API on **http://localhost:8000**. After changing Rust code, rebuild just the backend:
 
-Quick check:
+```bash
+docker compose up --build backend
+```
+
+Quick check once it is up:
 
 ```bash
 curl -s -X POST http://localhost:8000/api/users \
   -H 'Content-Type: application/json' \
   -d '{"name":"demo","password":"demo1234"}'
+```
+
+Follow logs or open a shell in the running container:
+
+```bash
+docker compose logs -f backend
+docker compose exec backend /bin/sh
 ```
 
 The frontend expects this API at `http://localhost:8000/api`

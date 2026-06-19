@@ -87,38 +87,59 @@ original Material‑UI v4 look.
 
 ## Prerequisites
 
-- **Node.js** 18+ (tested on Node 25) and npm.
-- The **backend API** must be running and reachable (see [`../finance`](../finance)). By default the
-  app targets `http://localhost:8000/api`.
+The app runs as a container in the monorepo's Docker Compose stack — you do **not** need a local
+Node.js install to build or run it.
+
+- **Docker Engine + Compose v2** (or Docker Desktop). *(On this machine, Docker runs inside **WSL**.)*
+
+Compose builds the app image, starts the Vite dev server (with hot reload), and also brings up the
+backend API the app talks to. See the [monorepo README](../README.md) for the one‑command quickstart.
 
 ---
 
-## Setup
+## Configuration
 
-```bash
-cd financejs
-npm install
+The app reads its API URL from a Vite env variable (the `REACT_APP_` prefix is kept for
+compatibility). Because the app runs in **your browser**, this must point at the **host‑published**
+backend port — not the internal Compose service name.
+
+In Docker it is injected into the `frontend` service from the root `.env`'s `API_BASE_URL`
+(default `http://localhost:8000/api`):
+
+```yaml
+# docker-compose.yml → services.frontend.environment
+REACT_APP_API_BASE_URL: ${API_BASE_URL:-http://localhost:8000/api}
 ```
 
-Configuration is read from env files via Vite (the `REACT_APP_` prefix is kept for compatibility):
-
-- `.env.development` → `REACT_APP_API_BASE_URL=http://localhost:8000/api`
-- `.env.production` → your deployed API URL
-
-Adjust these if your backend runs elsewhere.
+Change `API_BASE_URL` (and `BACKEND_PORT`) in the root `.env` if you move the backend. The tracked
+`.env.development` / `.env.production` files provide the same default for reference.
 
 ---
 
 ## Run
 
+The app is built and started by Compose together with the backend and database — run from the
+**repository root**:
+
 ```bash
-npm run dev       # start the Vite dev server at http://localhost:3000
-npm run build     # production build to dist/
-npm run preview   # serve the production build locally
+docker compose up --build        # WSL: wsl docker compose up --build
 ```
 
-Open **http://localhost:3000**, then register a user or log in. Make sure the backend is running
-first, otherwise login and data requests will fail.
+Open **http://localhost:3000** and register a user or log in. The Vite dev server runs **inside** the
+container with **hot reload**: your local `financejs/` is bind‑mounted, so edits to the source reload
+the browser automatically (file‑watching uses polling inside the container — see
+[`vite.config.js`](./vite.config.js)).
+
+Useful commands (from the repo root):
+
+```bash
+docker compose logs -f frontend          # follow the dev-server output
+docker compose exec frontend /bin/sh     # shell into the container
+docker compose up --build frontend       # rebuild just the frontend image (e.g. after dependency changes)
+```
+
+The npm scripts (`npm run dev` / `build` / `preview`) still exist and run **inside** the container;
+the Compose setup runs `npm run dev` (HMR) for you.
 
 ---
 

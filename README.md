@@ -35,66 +35,88 @@ Browser ──HTTP/JSON──> financejs (React/Vite :3000) ──/api──> fi
 
 ## Prerequisites
 
-- **Rust** (stable) — via [rustup](https://rustup.rs/).
-- **A C toolchain** for building `ring` (TLS): on **Windows**, Visual Studio with the
-  *Desktop development with C++* workload; on **Linux/macOS**, gcc/clang.
-- **Node.js** 18+ (tested on 25) and **npm**.
-- **PostgreSQL** 16 (with the `pgcrypto` extension, included in the standard `contrib` package).
+The whole stack runs in Docker — the only thing you need installed is the container engine:
+
+- **Docker Engine + Compose v2** (or Docker Desktop). *(On this machine, Docker runs inside
+  **WSL**; invoke it as `wsl docker compose …` or from a WSL shell in the project directory.)*
+
+No local Rust, Node, or PostgreSQL install is required — Compose builds and runs all three.
 
 ---
 
 ## Quickstart
 
-From the repository root.
-
-### 1. Database
-
-Create the role/database and apply the schema:
-
-```sql
--- as a Postgres superuser (psql)
-CREATE ROLE finance LOGIN PASSWORD 'finance';
-CREATE DATABASE financedb OWNER finance;
-```
+One command builds everything, starts PostgreSQL, applies the schema, then starts the API and the
+web app:
 
 ```bash
-psql -U finance -d financedb -f finance/migrations/2021-01-19-171757_finance/up.sql
+cp .env.example .env        # set JWT_SECRET (Windows: copy .env.example .env)
+docker compose up --build   # WSL: wsl docker compose up --build
 ```
 
-### 2. Backend (API → http://localhost:8000)
+Then open **http://localhost:3000**, register a user, and start adding categories, accounts, and
+transactions. The API is on **http://localhost:8000**.
 
-```bash
-cd finance
-cp .env.example .env        # then edit JWT_SECRET (Windows: copy .env.example .env)
-cargo run
+To stop: `Ctrl+C`, or `docker compose down` (add `-v` to also drop the database volume).
+
+### What Compose runs
+
+Three services on a private bridge network, started in dependency order
+(**db** becomes healthy → **backend** → **frontend**):
+
+```
+                        Docker host (your machine)
+
+   Browser  ->  localhost:3000      (web app UI)
+            ->  localhost:8000/api  (API calls, sent to the host port)
+
+          3000                   8000                   5432   (published ports)
+            |                      |                      |
+   =========|======================|======================|=======  network "finance"
+            v                      v                      v
+   +-----------------+    +-----------------+    +-----------------+
+   | frontend (Vite) | -> | backend (Axum)  | -> | db (postgres)   |
+   | React + HMR     |    | REST API        |    | financedb       |
+   | :3000           |    | :8000           |    | :5432 (pgdata)  |
+   +-----------------+    +-----------------+    +-----------------+
+
+   Startup order:  db (healthy)  ->  backend  ->  frontend
+
+   The browser calls the API on the published host port (localhost:8000), not the
+   internal name. Inside the network the backend reaches Postgres as "db:5432"
+   (DATABASE_URL); the database persists in the pgdata volume.
 ```
 
-On **Windows**, run from a *Developer PowerShell for VS* (or after calling `vcvars64.bat`) so the
-MSVC linker and `ring` build succeed. Configuration is read from `finance/.env` — see the
-[backend README](./finance/README.md#configuration).
+| Service | Image / build | Host port | Notes |
+|---|---|---|---|
+| `db` | `postgres:16` | `5432` | Creates `finance`/`financedb`; auto‑applies the schema from the mounted migration on first boot; `pg_isready` healthcheck; data persisted in the `pgdata` volume. |
+| `backend` | built from [`finance/Dockerfile`](./finance/Dockerfile) | `8000` | Multi‑stage Rust → slim Debian image; `BIND_ADDR=0.0.0.0`; connects to `db`. Waits for the DB healthcheck. |
+| `frontend` | built from [`financejs/Dockerfile`](./financejs/Dockerfile) | `3000` | Vite dev server with **hot reload** (source bind‑mounted; container keeps its own Linux `node_modules`). |
 
-### 3. Frontend (Web app → http://localhost:3000)
+### Configuration & customization
 
-In a second terminal:
+Compose reads `./.env` (copy it from [`.env.example`](./.env.example)). All values have safe
+defaults:
 
-```bash
-cd financejs
-npm install
-npm run dev
-```
+| Variable | Default | Purpose |
+|---|---|---|
+| `JWT_SECRET` | `dev-secret-change-me` | Backend JWT signing secret — **change it** for anything but local dev. |
+| `DB_PORT` / `BACKEND_PORT` / `FRONTEND_PORT` | `5432` / `8000` / `3000` | Host ports. Override if any are already in use, e.g. `5433` / `8001` / `3001` (then update `API_BASE_URL` to match). |
+| `API_BASE_URL` | `http://localhost:8000/api` | Browser‑facing API URL — must match `BACKEND_PORT`. |
 
-The app targets `http://localhost:8000/api` by default (`financejs/.env.development`).
+On the **first** boot the database is created **empty** (schema only) — register a user via the app
+or the API. Your data then lives in the `pgdata` volume and persists across `docker compose up` /
+`down`, so you only register once (it is cleared only by `docker compose down -v`). The first build
+compiles the Rust release binary and installs npm packages, so it takes a few minutes; later runs are
+cached, and code changes hot‑reload (frontend) or rebuild with `docker compose up --build` (backend).
 
-### 4. Use it
-
-Open **http://localhost:3000**, register a user, then create categories → accounts → transactions.
-
-> Quick API check (no UI):
-> ```bash
-> curl -s -X POST http://localhost:8000/api/users \
->   -H 'Content-Type: application/json' \
->   -d '{"name":"demo","password":"demo1234"}'
-> ```
+> **WSL note:** with Docker running inside WSL (not Docker Desktop), the WSL VM — and therefore the
+> containers — stops when WSL goes idle. Keep a WSL shell/`docker compose up` running, or rely on the
+> services' `restart: unless-stopped` policy to bring them back when the daemon restarts.
+>
+> **Port note:** make sure nothing else on the host is already using `3000`, `8000`, or `5432`
+> (a previously‑running local Postgres or dev server, for example) before starting the stack; if so,
+> override the `*_PORT` values above (and `API_BASE_URL`).
 
 ---
 
@@ -102,9 +124,11 @@ Open **http://localhost:3000**, register a user, then create categories → acco
 
 ```
 .
-├── finance/        # Rust/Axum REST API   (own README.md + MIGRATION.md)
-├── financejs/      # React/Vite web app   (own README.md + MIGRATION.md)
-└── README.md       # you are here (shared overview + quickstart)
+├── finance/             # Rust/Axum REST API   (own README.md + MIGRATION.md + Dockerfile)
+├── financejs/           # React/Vite web app   (own README.md + MIGRATION.md + Dockerfile)
+├── docker-compose.yml   # full dev stack: db + backend + frontend
+├── .env.example         # compose configuration template (copy to .env)
+└── README.md            # you are here (shared overview + quickstart)
 ```
 
 History for both subprojects is preserved under their respective directories

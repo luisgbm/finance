@@ -289,17 +289,11 @@ A 30-assertion parity suite was run against the live server and database:
 
 ## 11. Build & run
 
-```powershell
-# Prereqs: stable Rust, MSVC C++ build tools, a running PostgreSQL with the financedb schema.
-# Configuration is read from finance\.env (DATABASE_URL, JWT_SECRET, JWT_VALIDITY_DAYS, BF_ROUNDS,
-# BIND_ADDR, PORT).
-
-cd finance
-cargo build              # MSVC environment (vcvars64) must be on PATH for the linker + ring
-cargo run                # serves http://127.0.0.1:8000
-```
-
-The frontend expects the API at `http://localhost:8000/api` (`REACT_APP_API_BASE_URL`).
+The backend now runs via **Docker Compose** from the repository root (`docker compose up --build`),
+which builds the Rust image (multi‑stage → slim Debian) and starts PostgreSQL with the schema applied
+automatically. See the [backend README](./README.md#build--run) and the
+[monorepo README](../README.md) for details. Configuration is supplied by the `backend` service in
+`docker-compose.yml` (`DATABASE_URL`, `JWT_SECRET`, `BIND_ADDR=0.0.0.0`, `PORT`, …).
 
 ---
 

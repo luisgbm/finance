@@ -1,0 +1,76 @@
+# Finance — full dev stack (PostgreSQL + Rust/Axum API + React/Vite app).
+#
+#   docker compose up --build
+#
+# Ports and the browser-facing API URL are parameterizable (see .env / .env.example)
+# so the stack can run on its defaults (3000/8000/5432) or alongside a native stack.
+name: finance
+
+services:
+  # PostgreSQL. On first start it creates the finance role/database and applies the
+  # schema from the mounted migration (pgcrypto + all tables).
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: finance
+      POSTGRES_PASSWORD: finance
+      POSTGRES_DB: financedb
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./finance/migrations/2021-01-19-171757_finance/up.sql:/docker-entrypoint-initdb.d/10-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U finance -d financedb"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [finance]
+
+  # Rust/Axum REST API. Waits for the database to be healthy before starting.
+  backend:
+    build:
+      context: ./finance
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://finance:finance@db:5432/financedb
+      BIND_ADDR: 0.0.0.0
+      PORT: 8000
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me}
+      JWT_VALIDITY_DAYS: 30
+      BF_ROUNDS: 10
+      RUST_LOG: finance=debug,tower_http=info,info
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [finance]
+
+  # React/Vite dev server with hot reload. The source is bind-mounted; an anonymous
+  # volume keeps the container's Linux node_modules separate from the host's.
+  frontend:
+    build:
+      context: ./financejs
+    restart: unless-stopped
+    environment:
+      # The app runs in YOUR browser, so this must point at the host-published backend
+      # port (not the compose service name).
+      REACT_APP_API_BASE_URL: ${API_BASE_URL:-http://localhost:8000/api}
+      VITE_USE_POLLING: "true"
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    volumes:
+      - ./financejs:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks: [finance]
+
+volumes:
+  pgdata:
+
+networks:
+  finance:
+    driver: bridge

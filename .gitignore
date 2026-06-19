@@ -1,5 +1,6 @@
 # --- Local environment / data (machine-specific, not for version control) ---
 .pg/
+.env
 finance/.env
 financejs/.env*.local
 

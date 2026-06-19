@@ -9,6 +9,13 @@ export default defineConfig({
   server: {
     port: 3000,
     host: true,
+    // When running in Docker on Windows (project on /mnt/c), native filesystem
+    // events don't propagate into the Linux container, so fall back to polling for
+    // hot reload. Enabled via VITE_USE_POLLING=true (set in docker-compose); native
+    // `npm run dev` leaves it off for efficient, event-based watching.
+    watch: process.env.VITE_USE_POLLING
+      ? { usePolling: true, interval: 300 }
+      : undefined,
   },
   envPrefix: ['VITE_', 'REACT_APP_'],
 });

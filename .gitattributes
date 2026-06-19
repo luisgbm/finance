@@ -1,0 +1,9 @@
+# Force LF for files that are consumed by Linux tooling / containers, regardless of
+# the repo's core.autocrlf setting (this project is developed on Windows where
+# autocrlf=true would otherwise rewrite these to CRLF and break them in Docker).
+*.sh            text eol=lf
+Dockerfile      text eol=lf
+*.Dockerfile    text eol=lf
+docker-compose*.yml text eol=lf
+*.sql           text eol=lf
+.dockerignore   text eol=lf

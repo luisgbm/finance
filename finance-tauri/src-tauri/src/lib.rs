@@ -32,6 +32,38 @@ fn fatal_startup_error(message: &str) -> ! {
     std::process::exit(1);
 }
 
+/// Install a global panic hook that routes panics into the log file before the process dies.
+///
+/// The release profile builds with `panic = "abort"`, so a panic terminates the app almost
+/// immediately and the WebView shows nothing. Without this hook the crash would leave no
+/// trace; here we record the panic message, thread and source location to the same rotating
+/// log file as everything else, then delegate to the default hook (which prints to stderr in
+/// debug builds). This is diagnostics only — it does not attempt to recover.
+fn install_panic_hook() {
+    let default_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        let location = info
+            .location()
+            .map(|l| format!("{}:{}:{}", l.file(), l.line(), l.column()))
+            .unwrap_or_else(|| "unknown location".to_string());
+
+        let message = match info.payload().downcast_ref::<&str>() {
+            Some(s) => (*s).to_string(),
+            None => match info.payload().downcast_ref::<String>() {
+                Some(s) => s.clone(),
+                None => "Box<dyn Any>".to_string(),
+            },
+        };
+
+        let thread = std::thread::current();
+        let thread_name = thread.name().unwrap_or("unnamed");
+
+        log::error!("panic in thread '{thread_name}' at {location}: {message}");
+
+        default_hook(info);
+    }));
+}
+
 /// Application entry point (shared by the desktop binary and any mobile entry point).
 ///
 /// On startup it opens the SQLite database in the OS app-data directory, registers the
@@ -40,6 +72,10 @@ fn fatal_startup_error(message: &str) -> ! {
 /// `commands.rs`) — there is no local HTTP server or port any more.
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Route panics into the log file (see the hook's doc comment). Installed first so it
+    // covers failures during startup too.
+    install_panic_hook();
+
     let mut builder = tauri::Builder::default();
 
     // The single-instance guard must be the first plugin registered. It focuses the
@@ -107,6 +143,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::register,
             commands::login,
+            commands::logout,
             commands::get_initial_data,
             commands::create_account,
             commands::get_accounts,
@@ -135,6 +172,30 @@ pub fn run() {
             commands::delete_scheduled_transaction,
             commands::pay_scheduled_transaction,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running the Finance application");
+        .build(tauri::generate_context!())
+        .expect("error while building the Finance application")
+        .run(|app_handle, event| {
+            // On shutdown, flush the write-ahead log back into the main database file so the
+            // single finance.db is self-contained (no leftover -wal/-shm side files still
+            // holding committed rows). Best-effort — a failure here must not block exit.
+            if let tauri::RunEvent::Exit = event {
+                checkpoint_wal(app_handle);
+            }
+        });
+}
+
+/// Flush and truncate the SQLite write-ahead log so every committed row lives in the main
+/// `finance.db` file after the app closes. Invoked from the `RunEvent::Exit` handler on the
+/// main thread, where briefly blocking on this small checkpoint query is fine.
+fn checkpoint_wal(app_handle: &tauri::AppHandle) {
+    let pool = app_handle.state::<AppState>().pool.clone();
+    let result = tauri::async_runtime::block_on(async move {
+        sqlx::query("PRAGMA wal_checkpoint(TRUNCATE)")
+            .execute(&pool)
+            .await
+    });
+    match result {
+        Ok(_) => log::info!("flushed the write-ahead log into the database file on exit"),
+        Err(err) => log::warn!("WAL checkpoint on exit failed: {err}"),
+    }
 }

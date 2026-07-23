@@ -1,9 +1,9 @@
 {
   "name": "finance-tauri",
-  "version": "2.0.0",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Finance — local-only desktop POC (Tauri + React + embedded Axum/SQLite).",
+  "description": "Finance — local-only desktop POC (Tauri + React + embedded SQLite, native IPC commands).",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

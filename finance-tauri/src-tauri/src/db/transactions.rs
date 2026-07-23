@@ -1,5 +1,5 @@
 use chrono::NaiveDateTime;
-use sqlx::SqlitePool;
+use sqlx::{SqliteConnection, SqlitePool};
 
 use crate::error::AppError;
 use crate::models::{CategoryTypes, NewTransactionData, Transaction};
@@ -30,14 +30,26 @@ const JOIN_SELECT: &str = "SELECT t.id, t.value, t.description, t.date, \
     JOIN accounts a ON a.id = t.account";
 
 pub async fn insert(pool: &SqlitePool, new: &NewTransactionData) -> Result<Transaction, AppError> {
-    // Transactions and transfers share a single id space (React uses the id as a list key
-    // when the two are merged for an account view). Postgres achieved this with a shared
-    // SEQUENCE; in SQLite we draw the next id from the dedicated `seq_tx_tr` table and
-    // assign it explicitly, all inside one transaction so a failure rolls the id back.
     let mut tx = pool.begin().await?;
+    let transaction = insert_on(&mut tx, new).await?;
+    tx.commit().await?;
+    Ok(transaction)
+}
 
+/// Insert a transaction using the caller's connection/transaction, so it can be composed
+/// atomically with other writes (e.g. paying a scheduled transaction, which also advances
+/// or deletes the schedule in the same transaction).
+///
+/// Transactions and transfers share a single id space (React uses the id as a list key when
+/// the two are merged for an account view). Postgres achieved this with a shared SEQUENCE; in
+/// SQLite we draw the next id from the dedicated `seq_tx_tr` table and assign it explicitly.
+/// The seq draw and the insert must run on the same connection for the id to be consistent.
+pub async fn insert_on(
+    conn: &mut SqliteConnection,
+    new: &NewTransactionData,
+) -> Result<Transaction, AppError> {
     let id: i64 = sqlx::query_scalar("INSERT INTO seq_tx_tr DEFAULT VALUES RETURNING id")
-        .fetch_one(&mut *tx)
+        .fetch_one(&mut *conn)
         .await?;
 
     let transaction = sqlx::query_as::<_, Transaction>(&format!(
@@ -51,10 +63,8 @@ pub async fn insert(pool: &SqlitePool, new: &NewTransactionData) -> Result<Trans
     .bind(new.account)
     .bind(new.category)
     .bind(new.user_id)
-    .fetch_one(&mut *tx)
+    .fetch_one(&mut *conn)
     .await?;
-
-    tx.commit().await?;
 
     Ok(transaction)
 }

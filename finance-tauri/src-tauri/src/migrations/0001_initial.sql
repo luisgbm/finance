@@ -1,4 +1,4 @@
--- SQLite schema for the Finance desktop POC.
+-- Migration 0001: initial SQLite schema for the Finance desktop app.
 --
 -- Translated from the original Postgres migration:
 --   * SERIAL / sequence-backed PKs        -> INTEGER PRIMARY KEY AUTOINCREMENT
@@ -8,9 +8,11 @@
 --   * TIMESTAMP                            -> TEXT (sqlx stores chrono NaiveDateTime as text)
 --   * pgcrypto extension                   -> removed (password hashing happens in Rust)
 --
--- Every statement is idempotent (IF NOT EXISTS) so it can run on every launch.
--- Foreign keys are enabled per-connection via SqliteConnectOptions::foreign_keys(true),
--- which makes the ON DELETE CASCADE clauses below behave like the Postgres original.
+-- Statements use IF NOT EXISTS so this migration is a no-op on databases created by the
+-- earlier POC (which applied the schema unconditionally on every launch) before the
+-- PRAGMA user_version migration ladder existed. Foreign keys are enabled per-connection via
+-- SqliteConnectOptions::foreign_keys(true), which makes the ON DELETE CASCADE clauses behave
+-- like the Postgres original.
 
 CREATE TABLE IF NOT EXISTS app_users
 (

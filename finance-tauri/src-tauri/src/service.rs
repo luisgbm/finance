@@ -34,16 +34,17 @@ pub async fn accounts_with_balance(
 
 /// Build the `InitialData` payload returned by login / register / initial-data fetch.
 ///
-/// Since the JWT was dropped in the IPC migration, the `token` field now simply carries the
-/// user id as a string. The frontend still persists it in `localStorage['token']` and sends
-/// it back as the `user_id` argument on every authenticated command, so login survives an
-/// app restart exactly as before.
+/// The `token` is the opaque session token minted at login (see `db::sessions`); the frontend
+/// persists it and sends it back on every authenticated command. It is passed in rather than
+/// derived here because only the auth commands know whether they just created a new session or
+/// are echoing an existing one.
 pub async fn build_initial_data(
     pool: &SqlitePool,
     user_id: i32,
+    token: String,
 ) -> Result<InitialData, AppError> {
     Ok(InitialData {
-        token: user_id.to_string(),
+        token,
         accounts: accounts_with_balance(pool, user_id).await?,
         categories: db::categories::get_all(pool, user_id).await?,
         scheduled_transactions: all_scheduled_enriched(pool, user_id).await?,

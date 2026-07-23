@@ -1,17 +1,11 @@
 import { invokeApi } from './finance';
 
-// The logged-in user's id, persisted (as a string) in localStorage under 'token'. Since the
-// JWT was dropped in the IPC migration, this id is sent as the `user_id` argument on every
-// authenticated command; persisting it keeps the user logged in across app restarts, exactly
-// as the JWT did before.
-const getUserId = () => {
-    const stored = localStorage.getItem('token');
-    if (stored == null) {
-        return null;
-    }
-    const id = parseInt(stored, 10);
-    return Number.isNaN(id) ? null : id;
-};
+// The opaque session token minted by the backend at login/register, persisted in
+// localStorage under 'token'. It replaces the previous scheme of sending the raw user id:
+// the token is unguessable and resolved to a user id server-side, so the WebView can no
+// longer read another user's data by changing a number. Persisting it keeps the user logged
+// in across app restarts (exactly as the JWT, and later the id, did before).
+const getToken = () => localStorage.getItem('token');
 
 const unauthorizedError = () => {
     const e = new Error('unauthorized');
@@ -19,16 +13,16 @@ const unauthorizedError = () => {
     return e;
 };
 
-// Invoke an authenticated command, injecting the current user's id. Logs out (clears the
-// stored id) on a 401, matching the original axios interceptor behaviour.
+// Invoke an authenticated command, injecting the current session token. Logs out (clears the
+// stored token) on a 401, matching the original axios interceptor behaviour.
 const callAuthed = async (command, args = {}) => {
-    const userId = getUserId();
-    if (userId == null) {
+    const token = getToken();
+    if (token == null) {
         logout();
         throw unauthorizedError();
     }
     try {
-        return await invokeApi(command, { userId, ...args });
+        return await invokeApi(command, { token, ...args });
     } catch (e) {
         if (e.response && e.response.status === 401) {
             logout();
@@ -59,13 +53,20 @@ const login = async (name, password) => {
     }
 };
 
+// Clear the local session immediately (so the UI returns to login without waiting), then
+// best-effort tell the backend to invalidate the token. The backend call is fire-and-forget:
+// a failure (or an already-unknown token) must not block logging out locally.
 const logout = () => {
+    const token = getToken();
     localStorage.removeItem('token');
+    if (token != null) {
+        invokeApi('logout', { token }).catch(() => {});
+    }
 };
 
 const validateToken = async () => {
     try {
-        if (localStorage.getItem('token') == null) {
+        if (getToken() == null) {
             return null;
         }
         return await callAuthed('get_initial_data');
@@ -81,3 +82,4 @@ export const authenticationService = {
     callAuthed,
     validateToken
 };
+

@@ -1,5 +1,5 @@
 use chrono::NaiveDateTime;
-use sqlx::SqlitePool;
+use sqlx::{SqliteConnection, SqlitePool};
 
 use crate::error::AppError;
 use crate::models::{NewTransferData, Transfer};
@@ -34,11 +34,21 @@ pub struct TransferToRow {
 }
 
 pub async fn insert(pool: &SqlitePool, new: &NewTransferData) -> Result<Transfer, AppError> {
-    // Share the transactions/transfers id space via `seq_tx_tr` (see transactions::insert).
     let mut tx = pool.begin().await?;
+    let transfer = insert_on(&mut tx, new).await?;
+    tx.commit().await?;
+    Ok(transfer)
+}
 
+/// Insert a transfer using the caller's connection/transaction, so it can be composed
+/// atomically with other writes (see [`crate::db::transactions::insert_on`]). Shares the
+/// transactions/transfers id space via `seq_tx_tr`.
+pub async fn insert_on(
+    conn: &mut SqliteConnection,
+    new: &NewTransferData,
+) -> Result<Transfer, AppError> {
     let id: i64 = sqlx::query_scalar("INSERT INTO seq_tx_tr DEFAULT VALUES RETURNING id")
-        .fetch_one(&mut *tx)
+        .fetch_one(&mut *conn)
         .await?;
 
     let transfer = sqlx::query_as::<_, Transfer>(&format!(
@@ -52,10 +62,8 @@ pub async fn insert(pool: &SqlitePool, new: &NewTransferData) -> Result<Transfer
     .bind(new.description.as_str())
     .bind(new.date)
     .bind(new.user_id)
-    .fetch_one(&mut *tx)
+    .fetch_one(&mut *conn)
     .await?;
-
-    tx.commit().await?;
 
     Ok(transfer)
 }

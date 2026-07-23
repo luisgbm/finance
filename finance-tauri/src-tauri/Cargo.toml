@@ -36,6 +36,8 @@ chronoutil = "0.2"
 bcrypt = "0.15"
 thiserror = "2"
 anyhow = "1"
+# Opaque, unguessable session tokens (UUID v4) minted at login (see db/sessions.rs).
+uuid = { version = "1", features = ["v4"] }
 
 [profile.release]
 # Smaller, self-contained release binary.

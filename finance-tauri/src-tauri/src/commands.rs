@@ -1,10 +1,10 @@
 //! Tauri IPC commands — the desktop replacement for the former Axum REST handlers.
 //!
-//! Each `#[tauri::command]` is a thin wrapper that receives the shared [`AppState`] plus the
-//! caller-supplied `user_id` (sent by the frontend in place of the old JWT) and delegates to
-//! the unchanged `db` / `service` layers. Non-trivial logic (scheduled-transaction validation
-//! and the pay/advance workflow) lives in free helper functions so it can be unit-tested
-//! without constructing a Tauri `State`.
+//! Each `#[tauri::command]` is a thin wrapper that receives the shared [`AppState`] and, for
+//! authenticated commands, an opaque session `token` (minted at login, see [`crate::db::sessions`]).
+//! The token is resolved to a `user_id` server-side via [`require_user`], so — unlike the
+//! previous design — the WebView can no longer read another user's data by supplying a
+//! different id; it can only present a token it was actually issued.
 //!
 //! Argument naming: Tauri passes command arguments as a JSON object with camelCase keys and
 //! maps them to the snake_case Rust parameters (e.g. JS `accountId` -> `account_id`). Struct
@@ -27,6 +27,12 @@ use crate::models::{
 use crate::service;
 use crate::state::AppState;
 
+/// Resolve a session token to the authenticated user id, or `Err(Unauthorized)` (401) which the
+/// frontend turns into a logout. Every authenticated command funnels through this.
+async fn require_user(pool: &SqlitePool, token: &str) -> Result<i32, AppError> {
+    db::sessions::resolve(pool, token).await
+}
+
 // ---------------------------------------------------------------------------------------
 // Auth / session
 // ---------------------------------------------------------------------------------------
@@ -42,7 +48,10 @@ pub async fn register(
     // Re-authenticate with the same credentials to assemble the initial payload,
     // mirroring the original backend.
     match db::users::authenticate(&state.pool, &user.name, &req.password).await? {
-        Some(authed) => service::build_initial_data(&state.pool, authed.id).await,
+        Some(authed) => {
+            let token = db::sessions::create(&state.pool, authed.id).await?;
+            service::build_initial_data(&state.pool, authed.id, token).await
+        }
         None => Err(AppError::Unauthorized),
     }
 }
@@ -50,19 +59,30 @@ pub async fn register(
 #[tauri::command]
 pub async fn login(state: State<'_, AppState>, req: NewAppUser) -> Result<InitialData, AppError> {
     match db::users::authenticate(&state.pool, &req.name, &req.password).await? {
-        Some(user) => service::build_initial_data(&state.pool, user.id).await,
+        Some(user) => {
+            let token = db::sessions::create(&state.pool, user.id).await?;
+            service::build_initial_data(&state.pool, user.id, token).await
+        }
         None => Err(AppError::Unauthorized),
     }
 }
 
-/// Re-fetch the full initial payload for an already-known user (the former `GET /token`).
-/// Used on app start to restore the session persisted in `localStorage`.
+/// Invalidate a session (logout). Best-effort: deleting an unknown token is a no-op.
+#[tauri::command]
+pub async fn logout(state: State<'_, AppState>, token: String) -> Result<(), AppError> {
+    db::sessions::delete(&state.pool, &token).await
+}
+
+/// Re-fetch the full initial payload for the session's user (the former `GET /token`). Used on
+/// app start to restore the session persisted in `localStorage`; a stale/unknown token yields
+/// 401 and the frontend returns to the login screen.
 #[tauri::command]
 pub async fn get_initial_data(
     state: State<'_, AppState>,
-    user_id: i32,
+    token: String,
 ) -> Result<InitialData, AppError> {
-    service::build_initial_data(&state.pool, user_id).await
+    let user_id = require_user(&state.pool, &token).await?;
+    service::build_initial_data(&state.pool, user_id, token).await
 }
 
 // ---------------------------------------------------------------------------------------
@@ -72,9 +92,10 @@ pub async fn get_initial_data(
 #[tauri::command]
 pub async fn create_account(
     state: State<'_, AppState>,
-    user_id: i32,
+    token: String,
     name: String,
 ) -> Result<GetAccount, AppError> {
+    let user_id = require_user(&state.pool, &token).await?;
     let account = db::accounts::insert(&state.pool, &name, user_id).await?;
     Ok(GetAccount {
         id: account.id,
@@ -87,17 +108,19 @@ pub async fn create_account(
 #[tauri::command]
 pub async fn get_accounts(
     state: State<'_, AppState>,
-    user_id: i32,
+    token: String,
 ) -> Result<Vec<GetAccount>, AppError> {
+    let user_id = require_user(&state.pool, &token).await?;
     service::accounts_with_balance(&state.pool, user_id).await
 }
 
 #[tauri::command]
 pub async fn get_account(
     state: State<'_, AppState>,
-    user_id: i32,
+    token: String,
     account_id: i32,
 ) -> Result<GetAccount, AppError> {
+    let user_id = require_user(&state.pool, &token).await?;
     let account = db::accounts::get(&state.pool, account_id, user_id).await?;
     let balance = db::accounts::balance(&state.pool, account.id, user_id).await?;
     Ok(GetAccount {
@@ -111,10 +134,11 @@ pub async fn get_account(
 #[tauri::command]
 pub async fn update_account(
     state: State<'_, AppState>,
-    user_id: i32,
+    token: String,
     account_id: i32,
     name: String,
 ) -> Result<GetAccount, AppError> {
+    let user_id = require_user(&state.pool, &token).await?;
     let account = db::accounts::update(&state.pool, account_id, &name, user_id).await?;
     let balance = db::accounts::balance(&state.pool, account.id, user_id).await?;
     Ok(GetAccount {
@@ -128,9 +152,10 @@ pub async fn update_account(
 #[tauri::command]
 pub async fn delete_account(
     state: State<'_, AppState>,
-    user_id: i32,
+    token: String,
     account_id: i32,
 ) -> Result<Account, AppError> {
+    let user_id = require_user(&state.pool, &token).await?;
     db::accounts::delete(&state.pool, account_id, user_id).await
 }
 
@@ -141,17 +166,19 @@ pub async fn delete_account(
 #[tauri::command]
 pub async fn create_category(
     state: State<'_, AppState>,
-    user_id: i32,
+    token: String,
     req: PostCategory,
 ) -> Result<Category, AppError> {
+    let user_id = require_user(&state.pool, &token).await?;
     db::categories::insert(&state.pool, req.categorytype, &req.name, user_id).await
 }
 
 #[tauri::command]
 pub async fn get_categories(
     state: State<'_, AppState>,
-    user_id: i32,
+    token: String,
 ) -> Result<Vec<Category>, AppError> {
+    let user_id = require_user(&state.pool, &token).await?;
     db::categories::get_all(&state.pool, user_id).await
 }
 
@@ -160,9 +187,10 @@ pub async fn get_categories(
 #[tauri::command]
 pub async fn get_categories_by_type(
     state: State<'_, AppState>,
-    user_id: i32,
+    token: String,
     category_type: String,
 ) -> Result<Vec<Category>, AppError> {
+    let user_id = require_user(&state.pool, &token).await?;
     let category_type = match category_type.to_lowercase().as_str() {
         "expense" => CategoryTypes::Expense,
         "income" => CategoryTypes::Income,
@@ -174,28 +202,31 @@ pub async fn get_categories_by_type(
 #[tauri::command]
 pub async fn get_category(
     state: State<'_, AppState>,
-    user_id: i32,
+    token: String,
     category_id: i32,
 ) -> Result<Category, AppError> {
+    let user_id = require_user(&state.pool, &token).await?;
     db::categories::get(&state.pool, category_id, user_id).await
 }
 
 #[tauri::command]
 pub async fn update_category(
     state: State<'_, AppState>,
-    user_id: i32,
+    token: String,
     category_id: i32,
     req: PatchCategory,
 ) -> Result<Category, AppError> {
+    let user_id = require_user(&state.pool, &token).await?;
     db::categories::update(&state.pool, category_id, req.categorytype, &req.name, user_id).await
 }
 
 #[tauri::command]
 pub async fn delete_category(
     state: State<'_, AppState>,
-    user_id: i32,
+    token: String,
     category_id: i32,
 ) -> Result<Category, AppError> {
+    let user_id = require_user(&state.pool, &token).await?;
     db::categories::delete(&state.pool, category_id, user_id).await
 }
 
@@ -206,10 +237,11 @@ pub async fn delete_category(
 #[tauri::command]
 pub async fn create_transaction(
     state: State<'_, AppState>,
-    user_id: i32,
+    token: String,
     account_id: i32,
     req: PostTransaction,
 ) -> Result<Transaction, AppError> {
+    let user_id = require_user(&state.pool, &token).await?;
     // Both the account and category must exist and belong to the user (404 otherwise).
     db::accounts::get(&state.pool, account_id, user_id).await?;
     db::categories::get(&state.pool, req.category, user_id).await?;
@@ -229,9 +261,10 @@ pub async fn create_transaction(
 #[tauri::command]
 pub async fn get_transactions_for_account(
     state: State<'_, AppState>,
-    user_id: i32,
+    token: String,
     account_id: i32,
 ) -> Result<Vec<TransactionTransferJoined>, AppError> {
+    let user_id = require_user(&state.pool, &token).await?;
     // 404 if the account does not exist for this user.
     db::accounts::get(&state.pool, account_id, user_id).await?;
 
@@ -257,9 +290,10 @@ pub async fn get_transactions_for_account(
 #[tauri::command]
 pub async fn get_transaction(
     state: State<'_, AppState>,
-    user_id: i32,
+    token: String,
     transaction_id: i32,
 ) -> Result<TransactionTransferJoined, AppError> {
+    let user_id = require_user(&state.pool, &token).await?;
     let row = db::transactions::get_joined(&state.pool, transaction_id, user_id).await?;
     Ok(service::tx_join_to_dto(row))
 }
@@ -267,10 +301,11 @@ pub async fn get_transaction(
 #[tauri::command]
 pub async fn update_transaction(
     state: State<'_, AppState>,
-    user_id: i32,
+    token: String,
     transaction_id: i32,
     req: PatchTransaction,
 ) -> Result<Transaction, AppError> {
+    let user_id = require_user(&state.pool, &token).await?;
     db::accounts::get(&state.pool, req.account, user_id).await?;
     db::categories::get(&state.pool, req.category, user_id).await?;
 
@@ -289,9 +324,10 @@ pub async fn update_transaction(
 #[tauri::command]
 pub async fn delete_transaction(
     state: State<'_, AppState>,
-    user_id: i32,
+    token: String,
     transaction_id: i32,
 ) -> Result<Transaction, AppError> {
+    let user_id = require_user(&state.pool, &token).await?;
     db::transactions::delete(&state.pool, transaction_id, user_id).await
 }
 
@@ -302,11 +338,12 @@ pub async fn delete_transaction(
 #[tauri::command]
 pub async fn create_transfer(
     state: State<'_, AppState>,
-    user_id: i32,
+    token: String,
     origin_account: i32,
     destination_account: i32,
     req: PostTransfer,
 ) -> Result<Transfer, AppError> {
+    let user_id = require_user(&state.pool, &token).await?;
     // Both endpoints of the transfer must exist for this user (404 otherwise).
     db::accounts::get(&state.pool, origin_account, user_id).await?;
     db::accounts::get(&state.pool, destination_account, user_id).await?;
@@ -326,19 +363,21 @@ pub async fn create_transfer(
 #[tauri::command]
 pub async fn get_transfer(
     state: State<'_, AppState>,
-    user_id: i32,
+    token: String,
     transfer_id: i32,
 ) -> Result<Transfer, AppError> {
+    let user_id = require_user(&state.pool, &token).await?;
     db::transfers::get(&state.pool, transfer_id, user_id).await
 }
 
 #[tauri::command]
 pub async fn update_transfer(
     state: State<'_, AppState>,
-    user_id: i32,
+    token: String,
     transfer_id: i32,
     req: PatchTransfer,
 ) -> Result<Transfer, AppError> {
+    let user_id = require_user(&state.pool, &token).await?;
     db::accounts::get(&state.pool, req.origin_account, user_id).await?;
     db::accounts::get(&state.pool, req.destination_account, user_id).await?;
 
@@ -357,9 +396,10 @@ pub async fn update_transfer(
 #[tauri::command]
 pub async fn delete_transfer(
     state: State<'_, AppState>,
-    user_id: i32,
+    token: String,
     transfer_id: i32,
 ) -> Result<Transfer, AppError> {
+    let user_id = require_user(&state.pool, &token).await?;
     db::transfers::delete(&state.pool, transfer_id, user_id).await
 }
 
@@ -370,9 +410,10 @@ pub async fn delete_transfer(
 #[tauri::command]
 pub async fn create_scheduled_transaction(
     state: State<'_, AppState>,
-    user_id: i32,
+    token: String,
     req: PostScheduledTransaction,
 ) -> Result<GetScheduledTransaction, AppError> {
+    let user_id = require_user(&state.pool, &token).await?;
     let new = build_new_scheduled(&state.pool, user_id, &req)
         .await?
         .ok_or(AppError::BadRequest)?;
@@ -384,17 +425,19 @@ pub async fn create_scheduled_transaction(
 #[tauri::command]
 pub async fn get_scheduled_transactions(
     state: State<'_, AppState>,
-    user_id: i32,
+    token: String,
 ) -> Result<Vec<GetScheduledTransaction>, AppError> {
+    let user_id = require_user(&state.pool, &token).await?;
     service::all_scheduled_enriched(&state.pool, user_id).await
 }
 
 #[tauri::command]
 pub async fn get_scheduled_transaction(
     state: State<'_, AppState>,
-    user_id: i32,
+    token: String,
     scheduled_transaction_id: i32,
 ) -> Result<GetScheduledTransaction, AppError> {
+    let user_id = require_user(&state.pool, &token).await?;
     let st = db::scheduled_transactions::get(&state.pool, scheduled_transaction_id, user_id).await?;
     service::enrich_scheduled(&state.pool, &st).await
 }
@@ -402,10 +445,11 @@ pub async fn get_scheduled_transaction(
 #[tauri::command]
 pub async fn update_scheduled_transaction(
     state: State<'_, AppState>,
-    user_id: i32,
+    token: String,
     scheduled_transaction_id: i32,
     req: PatchScheduledTransaction,
 ) -> Result<GetScheduledTransaction, AppError> {
+    let user_id = require_user(&state.pool, &token).await?;
     // Ensure the scheduled transaction exists (404 otherwise).
     db::scheduled_transactions::get(&state.pool, scheduled_transaction_id, user_id).await?;
 
@@ -422,28 +466,48 @@ pub async fn update_scheduled_transaction(
 #[tauri::command]
 pub async fn delete_scheduled_transaction(
     state: State<'_, AppState>,
-    user_id: i32,
+    token: String,
     scheduled_transaction_id: i32,
 ) -> Result<ScheduledTransaction, AppError> {
+    let user_id = require_user(&state.pool, &token).await?;
     db::scheduled_transactions::delete(&state.pool, scheduled_transaction_id, user_id).await
 }
 
 #[tauri::command]
 pub async fn pay_scheduled_transaction(
     state: State<'_, AppState>,
-    user_id: i32,
+    token: String,
     scheduled_transaction_id: i32,
     req: PostScheduledTransactionPay,
 ) -> Result<ScheduledTransaction, AppError> {
+    let user_id = require_user(&state.pool, &token).await?;
     pay_scheduled_impl(&state.pool, user_id, scheduled_transaction_id, &req).await
 }
 
 // ---------------------------------------------------------------------------------------
-// Helpers (shared by the commands above; also exercised directly by the integration test)
+// Helpers (shared by the commands above; also exercised directly by the integration tests)
 // ---------------------------------------------------------------------------------------
+
+/// The real transaction/transfer a scheduled payment materialises into.
+enum Materialize {
+    Transaction(NewTransactionData),
+    Transfer(NewTransferData),
+}
+
+/// What happens to the schedule itself once it has been paid.
+enum Advance {
+    /// One-off, or the last occurrence of a finite repeat — remove the schedule.
+    Remove,
+    /// Repeating — bump the count and next date to the following occurrence.
+    Next(NewScheduledTransaction),
+}
 
 /// Materialise a scheduled transaction into a real transaction/transfer, then either delete
 /// the schedule (one-off / finished) or advance it to its next occurrence.
+///
+/// The materialise + advance/delete writes run in a **single** database transaction, so a
+/// crash can never record the payment without also advancing/removing the schedule (which
+/// would let the same occurrence be paid twice). Reference validation happens first as reads.
 pub(crate) async fn pay_scheduled_impl(
     pool: &SqlitePool,
     user_id: i32,
@@ -452,8 +516,8 @@ pub(crate) async fn pay_scheduled_impl(
 ) -> Result<ScheduledTransaction, AppError> {
     let st = db::scheduled_transactions::get(pool, id, user_id).await?;
 
-    // 1. Materialise the scheduled item into a real transaction or transfer.
-    match st.kind {
+    // 1. Validate the payment against the schedule kind and build the write to perform.
+    let materialize = match st.kind {
         ScheduledTransactionKinds::Transaction => {
             let (account_id, category_id) = match (body.account_id, body.category_id) {
                 (Some(a), Some(c)) => (a, c),
@@ -467,18 +531,14 @@ pub(crate) async fn pay_scheduled_impl(
                 .await
                 .map_err(|_| AppError::NotFound)?;
 
-            db::transactions::insert(
-                pool,
-                &NewTransactionData {
-                    value: body.value,
-                    description: body.description.clone(),
-                    date: body.date,
-                    account: account_id,
-                    category: category_id,
-                    user_id,
-                },
-            )
-            .await?;
+            Materialize::Transaction(NewTransactionData {
+                value: body.value,
+                description: body.description.clone(),
+                date: body.date,
+                account: account_id,
+                category: category_id,
+                user_id,
+            })
         }
         ScheduledTransactionKinds::Transfer => {
             let (origin_id, destination_id) =
@@ -494,24 +554,48 @@ pub(crate) async fn pay_scheduled_impl(
                 .await
                 .map_err(|_| AppError::BadRequest)?;
 
-            db::transfers::insert(
-                pool,
-                &NewTransferData {
-                    origin_account: origin_id,
-                    destination_account: destination_id,
-                    value: body.value,
-                    description: body.description.clone(),
-                    date: body.date,
-                    user_id,
-                },
-            )
-            .await?;
+            Materialize::Transfer(NewTransferData {
+                origin_account: origin_id,
+                destination_account: destination_id,
+                value: body.value,
+                description: body.description.clone(),
+                date: body.date,
+                user_id,
+            })
+        }
+    };
+
+    // 2. Decide the schedule's fate (pure computation, no I/O).
+    let advance = compute_advance(&st, user_id)?;
+
+    // 3. Apply both effects atomically.
+    let mut tx = pool.begin().await?;
+
+    match &materialize {
+        Materialize::Transaction(data) => {
+            db::transactions::insert_on(&mut tx, data).await?;
+        }
+        Materialize::Transfer(data) => {
+            db::transfers::insert_on(&mut tx, data).await?;
         }
     }
 
-    // 2. Either drop the schedule (one-off / finished) or advance it to the next occurrence.
+    let result = match &advance {
+        Advance::Remove => db::scheduled_transactions::delete_on(&mut tx, id, user_id).await?,
+        Advance::Next(updated) => {
+            db::scheduled_transactions::update_on(&mut tx, id, updated, user_id).await?
+        }
+    };
+
+    tx.commit().await?;
+
+    Ok(result)
+}
+
+/// Compute what should happen to a schedule after it is paid, without touching the database.
+fn compute_advance(st: &ScheduledTransaction, user_id: i32) -> Result<Advance, AppError> {
     if !st.repeat {
-        return db::scheduled_transactions::delete(pool, id, user_id).await;
+        return Ok(Advance::Remove);
     }
 
     let internal = |m: &str| AppError::Internal(m.to_string());
@@ -529,7 +613,7 @@ pub(crate) async fn pay_scheduled_impl(
             .end_after_repeats
             .ok_or_else(|| internal("finite schedule missing end_after_repeats"))?;
         if new_repeat_count >= end_after_repeats {
-            return db::scheduled_transactions::delete(pool, id, user_id).await;
+            return Ok(Advance::Remove);
         }
     }
 
@@ -548,7 +632,7 @@ pub(crate) async fn pay_scheduled_impl(
         new_repeat_count,
     );
 
-    let updated_input = NewScheduledTransaction {
+    Ok(Advance::Next(NewScheduledTransaction {
         kind: st.kind,
         value: st.value,
         description: st.description.clone(),
@@ -565,11 +649,7 @@ pub(crate) async fn pay_scheduled_impl(
         current_repeat_count: Some(new_repeat_count),
         next_date: Some(next_date),
         user_id,
-    };
-
-    db::scheduled_transactions::update(pool, id, &updated_input, user_id)
-        .await
-        .map_err(|_| internal("failed to update scheduled transaction"))
+    }))
 }
 
 /// Validate and assemble a `NewScheduledTransaction` from a request body. Returns `Ok(None)`

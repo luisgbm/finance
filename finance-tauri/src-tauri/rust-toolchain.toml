@@ -1,0 +1,8 @@
+# Pin the Rust toolchain so every contributor and CI build compiles the app with the same
+# stable compiler, keeping the self-contained release .exe reproducible. `stable` tracks the
+# latest stable release (never nightly); rustup installs it automatically on first build if
+# it is missing. The Tauri toolchain only needs the host target's std, so the minimal
+# profile keeps the install lean.
+[toolchain]
+channel = "stable"
+profile = "minimal"

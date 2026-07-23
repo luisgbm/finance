@@ -1,4 +1,4 @@
-use sqlx::SqlitePool;
+use sqlx::{SqliteConnection, SqlitePool};
 
 use crate::error::AppError;
 use crate::models::{NewScheduledTransaction, ScheduledTransaction};
@@ -77,6 +77,18 @@ pub async fn update(
     new: &NewScheduledTransaction,
     user_id: i32,
 ) -> Result<ScheduledTransaction, AppError> {
+    let mut conn = pool.acquire().await?;
+    update_on(&mut conn, id, new, user_id).await
+}
+
+/// Update a scheduled transaction on the caller's connection/transaction, so paying a
+/// repeating schedule can advance it atomically with materialising the payment.
+pub async fn update_on(
+    conn: &mut SqliteConnection,
+    id: i32,
+    new: &NewScheduledTransaction,
+    user_id: i32,
+) -> Result<ScheduledTransaction, AppError> {
     let st = sqlx::query_as::<_, ScheduledTransaction>(&format!(
         "UPDATE scheduled_transactions SET \
             kind = ?, value = ?, description = ?, created_date = ?, account_id = ?, \
@@ -102,7 +114,7 @@ pub async fn update(
     .bind(new.next_date)
     .bind(user_id)
     .bind(id)
-    .fetch_one(pool)
+    .fetch_one(&mut *conn)
     .await?;
 
     Ok(st)
@@ -113,12 +125,23 @@ pub async fn delete(
     id: i32,
     user_id: i32,
 ) -> Result<ScheduledTransaction, AppError> {
+    let mut conn = pool.acquire().await?;
+    delete_on(&mut conn, id, user_id).await
+}
+
+/// Delete a scheduled transaction on the caller's connection/transaction, so paying a
+/// one-off schedule can remove it atomically with materialising the payment.
+pub async fn delete_on(
+    conn: &mut SqliteConnection,
+    id: i32,
+    user_id: i32,
+) -> Result<ScheduledTransaction, AppError> {
     let st = sqlx::query_as::<_, ScheduledTransaction>(&format!(
         "DELETE FROM scheduled_transactions WHERE user_id = ? AND id = ? RETURNING {COLUMNS}"
     ))
     .bind(user_id)
     .bind(id)
-    .fetch_one(pool)
+    .fetch_one(&mut *conn)
     .await?;
 
     Ok(st)

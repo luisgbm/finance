@@ -3,10 +3,10 @@ use std::str::FromStr;
 
 /// Application configuration for the local desktop build.
 ///
-/// With the move to Tauri IPC there is no JWT any more (the frontend passes the logged-in
-/// user id directly), so the only remaining setting is the bcrypt cost used when hashing
-/// new passwords. It has a built-in default; the env var remains as an optional override
-/// (useful for tests / debugging).
+/// With the move to Tauri IPC there is no JWT any more; callers authenticate with an opaque
+/// session token (see `db::sessions`) that the backend resolves to a user id. The only
+/// remaining setting is the bcrypt cost used when hashing new passwords. It has a built-in
+/// default; the env var remains as an optional override (useful for tests / debugging).
 #[derive(Debug, Clone)]
 pub struct Config {
     pub bf_rounds: i32,

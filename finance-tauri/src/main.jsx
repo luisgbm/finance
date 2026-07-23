@@ -9,6 +9,9 @@ import '@fontsource/roboto/700.css';
 import { Provider } from 'react-redux';
 import { persistor, store } from './redux/store';
 import { PersistGate } from 'redux-persist/integration/react';
+import { setupLogForwarding } from './logging';
+
+setupLogForwarding();
 
 createRoot(document.getElementById('root')).render(
     <Provider store={store}>

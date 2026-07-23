@@ -17,6 +17,14 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 tauri = { version = "2", features = [] }
+# Desktop hardening plugins: file logging and a single-instance guard.
+tauri-plugin-log = "2"
+tauri-plugin-single-instance = "2"
+# Lightweight logging facade captured by tauri-plugin-log (replaces tracing-subscriber).
+log = "0.4"
+# Native message dialog for fatal startup errors, shown before the window/event loop exists
+# (so tauri-plugin-dialog's main-thread-dispatched blocking_show would deadlock here).
+rfd = { version = "0.15", default-features = false }
 axum = "0.8"
 tokio = { version = "1", features = ["full"] }
 tower-http = { version = "0.7", features = ["cors", "trace"] }
@@ -31,7 +39,6 @@ jsonwebtoken = { version = "10", features = ["rust_crypto"] }
 # Replaces the Postgres pgcrypto-based password hashing with an in-process bcrypt.
 bcrypt = "0.15"
 tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 thiserror = "2"
 anyhow = "1"
 

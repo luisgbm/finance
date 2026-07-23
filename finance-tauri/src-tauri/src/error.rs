@@ -35,7 +35,7 @@ impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let status = self.status();
         if let AppError::Internal(ref message) = self {
-            tracing::error!("internal error: {}", message);
+            log::error!("internal error: {}", message);
         }
         (status, Json(json!({ "error": self.to_string() }))).into_response()
     }

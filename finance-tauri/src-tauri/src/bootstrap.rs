@@ -82,11 +82,11 @@ pub async fn start(db_path: &Path) -> anyhow::Result<u16> {
         .context("failed to read the local API port")?
         .port();
 
-    tracing::info!("finance backend listening on http://127.0.0.1:{port}");
+    log::info!("finance backend listening on http://127.0.0.1:{port}");
 
     tauri::async_runtime::spawn(async move {
         if let Err(err) = axum::serve(listener, app).await {
-            tracing::error!("embedded server stopped with error: {err}");
+            log::error!("embedded server stopped with error: {err}");
         }
     });
 

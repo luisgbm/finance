@@ -38,6 +38,7 @@ async fn require_user(pool: &SqlitePool, token: &str) -> Result<i32, AppError> {
 // ---------------------------------------------------------------------------------------
 
 #[tauri::command]
+#[specta::specta]
 pub async fn register(
     state: State<'_, AppState>,
     req: NewAppUser,
@@ -57,6 +58,7 @@ pub async fn register(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn login(state: State<'_, AppState>, req: NewAppUser) -> Result<InitialData, AppError> {
     match db::users::authenticate(&state.pool, &req.name, &req.password).await? {
         Some(user) => {
@@ -69,6 +71,7 @@ pub async fn login(state: State<'_, AppState>, req: NewAppUser) -> Result<Initia
 
 /// Invalidate a session (logout). Best-effort: deleting an unknown token is a no-op.
 #[tauri::command]
+#[specta::specta]
 pub async fn logout(state: State<'_, AppState>, token: String) -> Result<(), AppError> {
     db::sessions::delete(&state.pool, &token).await
 }
@@ -77,6 +80,7 @@ pub async fn logout(state: State<'_, AppState>, token: String) -> Result<(), App
 /// app start to restore the session persisted in `localStorage`; a stale/unknown token yields
 /// 401 and the frontend returns to the login screen.
 #[tauri::command]
+#[specta::specta]
 pub async fn get_initial_data(
     state: State<'_, AppState>,
     token: String,
@@ -90,6 +94,7 @@ pub async fn get_initial_data(
 // ---------------------------------------------------------------------------------------
 
 #[tauri::command]
+#[specta::specta]
 pub async fn create_account(
     state: State<'_, AppState>,
     token: String,
@@ -106,6 +111,7 @@ pub async fn create_account(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn get_accounts(
     state: State<'_, AppState>,
     token: String,
@@ -115,6 +121,7 @@ pub async fn get_accounts(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn get_account(
     state: State<'_, AppState>,
     token: String,
@@ -132,6 +139,7 @@ pub async fn get_account(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn update_account(
     state: State<'_, AppState>,
     token: String,
@@ -150,6 +158,7 @@ pub async fn update_account(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn delete_account(
     state: State<'_, AppState>,
     token: String,
@@ -164,6 +173,7 @@ pub async fn delete_account(
 // ---------------------------------------------------------------------------------------
 
 #[tauri::command]
+#[specta::specta]
 pub async fn create_category(
     state: State<'_, AppState>,
     token: String,
@@ -174,6 +184,7 @@ pub async fn create_category(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn get_categories(
     state: State<'_, AppState>,
     token: String,
@@ -185,6 +196,7 @@ pub async fn get_categories(
 /// Filter categories by type. Replaces the former `/categories/expense` and
 /// `/categories/income` routes; the type is matched case-insensitively.
 #[tauri::command]
+#[specta::specta]
 pub async fn get_categories_by_type(
     state: State<'_, AppState>,
     token: String,
@@ -200,6 +212,7 @@ pub async fn get_categories_by_type(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn get_category(
     state: State<'_, AppState>,
     token: String,
@@ -210,6 +223,7 @@ pub async fn get_category(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn update_category(
     state: State<'_, AppState>,
     token: String,
@@ -221,6 +235,7 @@ pub async fn update_category(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn delete_category(
     state: State<'_, AppState>,
     token: String,
@@ -235,6 +250,7 @@ pub async fn delete_category(
 // ---------------------------------------------------------------------------------------
 
 #[tauri::command]
+#[specta::specta]
 pub async fn create_transaction(
     state: State<'_, AppState>,
     token: String,
@@ -259,6 +275,7 @@ pub async fn create_transaction(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn get_transactions_for_account(
     state: State<'_, AppState>,
     token: String,
@@ -288,6 +305,7 @@ pub async fn get_transactions_for_account(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn get_transaction(
     state: State<'_, AppState>,
     token: String,
@@ -299,6 +317,7 @@ pub async fn get_transaction(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn update_transaction(
     state: State<'_, AppState>,
     token: String,
@@ -322,6 +341,7 @@ pub async fn update_transaction(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn delete_transaction(
     state: State<'_, AppState>,
     token: String,
@@ -336,6 +356,7 @@ pub async fn delete_transaction(
 // ---------------------------------------------------------------------------------------
 
 #[tauri::command]
+#[specta::specta]
 pub async fn create_transfer(
     state: State<'_, AppState>,
     token: String,
@@ -361,6 +382,7 @@ pub async fn create_transfer(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn get_transfer(
     state: State<'_, AppState>,
     token: String,
@@ -371,6 +393,7 @@ pub async fn get_transfer(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn update_transfer(
     state: State<'_, AppState>,
     token: String,
@@ -394,6 +417,7 @@ pub async fn update_transfer(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn delete_transfer(
     state: State<'_, AppState>,
     token: String,
@@ -408,6 +432,7 @@ pub async fn delete_transfer(
 // ---------------------------------------------------------------------------------------
 
 #[tauri::command]
+#[specta::specta]
 pub async fn create_scheduled_transaction(
     state: State<'_, AppState>,
     token: String,
@@ -423,6 +448,7 @@ pub async fn create_scheduled_transaction(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn get_scheduled_transactions(
     state: State<'_, AppState>,
     token: String,
@@ -432,6 +458,7 @@ pub async fn get_scheduled_transactions(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn get_scheduled_transaction(
     state: State<'_, AppState>,
     token: String,
@@ -443,6 +470,7 @@ pub async fn get_scheduled_transaction(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn update_scheduled_transaction(
     state: State<'_, AppState>,
     token: String,
@@ -464,6 +492,7 @@ pub async fn update_scheduled_transaction(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn delete_scheduled_transaction(
     state: State<'_, AppState>,
     token: String,
@@ -474,6 +503,7 @@ pub async fn delete_scheduled_transaction(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn pay_scheduled_transaction(
     state: State<'_, AppState>,
     token: String,

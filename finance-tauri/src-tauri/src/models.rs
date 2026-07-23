@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 // controls the stored string values, keeping them byte-compatible with the old data.
 // ---------------------------------------------------------------------------
 
-#[derive(sqlx::Type, Debug, Serialize, Deserialize, Copy, Clone, PartialEq, Eq)]
+#[derive(sqlx::Type, specta::Type, Debug, Serialize, Deserialize, Copy, Clone, PartialEq, Eq)]
 #[sqlx(rename_all = "snake_case")]
 pub enum CategoryTypes {
     Expense,
@@ -25,14 +25,14 @@ pub enum CategoryTypes {
     TransferExpense,
 }
 
-#[derive(sqlx::Type, Debug, Serialize, Deserialize, Copy, Clone, PartialEq, Eq)]
+#[derive(sqlx::Type, specta::Type, Debug, Serialize, Deserialize, Copy, Clone, PartialEq, Eq)]
 #[sqlx(rename_all = "snake_case")]
 pub enum ScheduledTransactionKinds {
     Transaction,
     Transfer,
 }
 
-#[derive(sqlx::Type, Debug, Serialize, Deserialize, Copy, Clone, PartialEq, Eq)]
+#[derive(sqlx::Type, specta::Type, Debug, Serialize, Deserialize, Copy, Clone, PartialEq, Eq)]
 #[sqlx(rename_all = "snake_case")]
 pub enum RepeatFrequencies {
     Days,
@@ -52,7 +52,7 @@ pub struct AppUser {
     pub password: String,
 }
 
-#[derive(sqlx::FromRow, Debug, Serialize, Deserialize)]
+#[derive(sqlx::FromRow, specta::Type, Debug, Serialize, Deserialize)]
 pub struct Category {
     pub id: i32,
     pub categorytype: CategoryTypes,
@@ -60,14 +60,14 @@ pub struct Category {
     pub user_id: i32,
 }
 
-#[derive(sqlx::FromRow, Debug, Serialize, Deserialize)]
+#[derive(sqlx::FromRow, specta::Type, Debug, Serialize, Deserialize)]
 pub struct Account {
     pub id: i32,
     pub name: String,
     pub user_id: i32,
 }
 
-#[derive(sqlx::FromRow, Debug, Serialize, Deserialize)]
+#[derive(sqlx::FromRow, specta::Type, Debug, Serialize, Deserialize)]
 pub struct Transaction {
     pub id: i32,
     pub value: i32,
@@ -78,7 +78,7 @@ pub struct Transaction {
     pub user_id: i32,
 }
 
-#[derive(sqlx::FromRow, Debug, Serialize, Deserialize)]
+#[derive(sqlx::FromRow, specta::Type, Debug, Serialize, Deserialize)]
 pub struct Transfer {
     pub id: i32,
     pub origin_account: i32,
@@ -89,7 +89,7 @@ pub struct Transfer {
     pub user_id: i32,
 }
 
-#[derive(sqlx::FromRow, Debug, Serialize, Deserialize)]
+#[derive(sqlx::FromRow, specta::Type, Debug, Serialize, Deserialize)]
 pub struct ScheduledTransaction {
     pub id: i32,
     pub kind: ScheduledTransactionKinds,
@@ -114,13 +114,13 @@ pub struct ScheduledTransaction {
 // Request DTOs (deserialized from JSON request bodies)
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(specta::Type, Debug, Serialize, Deserialize)]
 pub struct NewAppUser {
     pub name: String,
     pub password: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(specta::Type, Debug, Serialize, Deserialize)]
 pub struct PostCategory {
     pub categorytype: CategoryTypes,
     pub name: String,
@@ -128,7 +128,7 @@ pub struct PostCategory {
 
 pub type PatchCategory = PostCategory;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(specta::Type, Debug, Serialize, Deserialize)]
 pub struct PostTransaction {
     pub value: i32,
     pub description: String,
@@ -136,7 +136,7 @@ pub struct PostTransaction {
     pub category: i32,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(specta::Type, Debug, Serialize, Deserialize)]
 pub struct PatchTransaction {
     pub value: i32,
     pub description: String,
@@ -145,14 +145,14 @@ pub struct PatchTransaction {
     pub category: i32,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(specta::Type, Debug, Serialize, Deserialize)]
 pub struct PostTransfer {
     pub value: i32,
     pub description: String,
     pub date: NaiveDateTime,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(specta::Type, Debug, Serialize, Deserialize)]
 pub struct PatchTransfer {
     pub origin_account: i32,
     pub destination_account: i32,
@@ -161,7 +161,7 @@ pub struct PatchTransfer {
     pub date: NaiveDateTime,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(specta::Type, Debug, Serialize, Deserialize)]
 pub struct PostScheduledTransaction {
     pub kind: ScheduledTransactionKinds,
     pub value: i32,
@@ -225,7 +225,7 @@ pub struct NewScheduledTransaction {
     pub user_id: i32,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(specta::Type, Debug, Serialize, Deserialize)]
 pub struct PostScheduledTransactionPay {
     pub value: i32,
     pub description: String,
@@ -240,7 +240,7 @@ pub struct PostScheduledTransactionPay {
 // Response DTOs (serialized to JSON response bodies)
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(specta::Type, Debug, Serialize, Deserialize)]
 pub struct InitialData {
     pub token: String,
     pub accounts: Vec<GetAccount>,
@@ -248,7 +248,7 @@ pub struct InitialData {
     pub scheduled_transactions: Vec<GetScheduledTransaction>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(specta::Type, Debug, Serialize, Deserialize)]
 pub struct GetAccount {
     pub id: i32,
     pub name: String,
@@ -256,7 +256,7 @@ pub struct GetAccount {
     pub user_id: i32,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(specta::Type, Debug, Serialize, Deserialize)]
 pub struct TransactionTransferJoined {
     pub id: i32,
     pub value: i32,
@@ -272,7 +272,7 @@ pub struct TransactionTransferJoined {
     pub from_account_name: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(specta::Type, Debug, Serialize, Deserialize)]
 pub struct GetScheduledTransaction {
     pub id: i32,
     pub kind: ScheduledTransactionKinds,

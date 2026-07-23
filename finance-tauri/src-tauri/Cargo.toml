@@ -38,6 +38,9 @@ thiserror = "2"
 anyhow = "1"
 # Opaque, unguessable session tokens (UUID v4) minted at login (see db/sessions.rs).
 uuid = { version = "1", features = ["v4"] }
+tauri-specta = { version = "=2.0.0-rc.21", features = ["typescript"] }
+specta-typescript = "0.0.9"
+specta = { version = "=2.0.0-rc.22", features = ["derive", "chrono"] }
 
 [profile.release]
 # Smaller, self-contained release binary.

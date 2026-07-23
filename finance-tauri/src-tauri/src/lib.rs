@@ -64,6 +64,45 @@ fn install_panic_hook() {
     }));
 }
 
+/// Build the tauri-specta command registry shared by the runtime invoke handler (in [`run`])
+/// and the binding-export test, so the generated TypeScript can never cover a different set of
+/// commands than the app actually serves. Adding a command here is the single place it needs
+/// to be registered for both wiring and type generation.
+pub(crate) fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
+    tauri_specta::Builder::<tauri::Wry>::new().commands(tauri_specta::collect_commands![
+        commands::register,
+        commands::login,
+        commands::logout,
+        commands::get_initial_data,
+        commands::create_account,
+        commands::get_accounts,
+        commands::get_account,
+        commands::update_account,
+        commands::delete_account,
+        commands::create_category,
+        commands::get_categories,
+        commands::get_categories_by_type,
+        commands::get_category,
+        commands::update_category,
+        commands::delete_category,
+        commands::create_transaction,
+        commands::get_transactions_for_account,
+        commands::get_transaction,
+        commands::update_transaction,
+        commands::delete_transaction,
+        commands::create_transfer,
+        commands::get_transfer,
+        commands::update_transfer,
+        commands::delete_transfer,
+        commands::create_scheduled_transaction,
+        commands::get_scheduled_transactions,
+        commands::get_scheduled_transaction,
+        commands::update_scheduled_transaction,
+        commands::delete_scheduled_transaction,
+        commands::pay_scheduled_transaction,
+    ])
+}
+
 /// Application entry point (shared by the desktop binary and any mobile entry point).
 ///
 /// On startup it opens the SQLite database in the OS app-data directory, registers the
@@ -75,6 +114,48 @@ pub fn run() {
     // Route panics into the log file (see the hook's doc comment). Installed first so it
     // covers failures during startup too.
     install_panic_hook();
+
+    // Type-safe IPC: tauri-specta introspects the command signatures to build the invoke handler
+    // wired into Tauri. In debug builds it additionally emits a TypeScript `bindings.ts` the
+    // frontend imports for compile-time-checked command names, arguments and return types.
+    let specta_builder = specta_builder();
+
+    // Keep the generated bindings in sync with the Rust commands — debug-only, so the release
+    // binary carries neither the exporter nor this dev tooling.
+    #[cfg(debug_assertions)]
+    {
+        // Headless regeneration hook: `cargo run -- --export-bindings` (or the debug exe with the
+        // same flag) writes `bindings.ts` via pure `specta` type introspection and exits before any
+        // window or database is created — the deterministic, GUI-free way to refresh the bindings.
+        // (The app binary loads cleanly here, whereas pulling the tauri-specta builder into a
+        // unit-test binary trips a WebView2 entry-point mismatch on Windows, so a test can't.)
+        if std::env::args().any(|arg| arg == "--export-bindings") {
+            match specta_builder.export(
+                specta_typescript::Typescript::default(),
+                "../src/api/bindings.ts",
+            ) {
+                Ok(()) => {
+                    println!("wrote TypeScript bindings to ../src/api/bindings.ts");
+                    std::process::exit(0);
+                }
+                Err(err) => {
+                    eprintln!("failed to export TypeScript bindings: {err}");
+                    std::process::exit(1);
+                }
+            }
+        }
+
+        // Also regenerate on every `tauri dev` startup (CWD = `src-tauri`, so the relative path
+        // resolves) so the bindings can't drift while developing. Non-fatal: a standalone `--debug`
+        // build launched from another directory can't resolve the path, and a panic here would stop
+        // the app from starting.
+        if let Err(err) = specta_builder.export(
+            specta_typescript::Typescript::default(),
+            "../src/api/bindings.ts",
+        ) {
+            log::warn!("could not export TypeScript bindings (expected outside `tauri dev`): {err}");
+        }
+    }
 
     let mut builder = tauri::Builder::default();
 
@@ -140,38 +221,7 @@ pub fn run() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![
-            commands::register,
-            commands::login,
-            commands::logout,
-            commands::get_initial_data,
-            commands::create_account,
-            commands::get_accounts,
-            commands::get_account,
-            commands::update_account,
-            commands::delete_account,
-            commands::create_category,
-            commands::get_categories,
-            commands::get_categories_by_type,
-            commands::get_category,
-            commands::update_category,
-            commands::delete_category,
-            commands::create_transaction,
-            commands::get_transactions_for_account,
-            commands::get_transaction,
-            commands::update_transaction,
-            commands::delete_transaction,
-            commands::create_transfer,
-            commands::get_transfer,
-            commands::update_transfer,
-            commands::delete_transfer,
-            commands::create_scheduled_transaction,
-            commands::get_scheduled_transactions,
-            commands::get_scheduled_transaction,
-            commands::update_scheduled_transaction,
-            commands::delete_scheduled_transaction,
-            commands::pay_scheduled_transaction,
-        ])
+        .invoke_handler(specta_builder.invoke_handler())
         .build(tauri::generate_context!())
         .expect("error while building the Finance application")
         .run(|app_handle, event| {

@@ -6,7 +6,9 @@ use serde::{Serialize, Serializer};
 /// (401 -> logout, 409 -> "user exists") keep working after the move to Tauri IPC.
 ///
 /// When a command returns `Err(AppError)`, Tauri serializes it (via the `Serialize` impl
-/// below) and the JS `invoke(...)` promise rejects with `{ status, message }`.
+/// below) and the JS `invoke(...)` promise rejects with `{ status, message }`. The
+/// `specta::Type` impl further down describes that exact `{ status, message }` shape so the
+/// generated TypeScript bindings type each command's error accurately.
 #[derive(Debug, thiserror::Error)]
 pub enum AppError {
     #[error("unauthorized")]
@@ -49,6 +51,28 @@ impl Serialize for AppError {
         state.serialize_field("status", &self.status_code())?;
         state.serialize_field("message", &self.to_string())?;
         state.end()
+    }
+}
+
+/// Structural mirror of the JSON payload produced by [`AppError`]'s `Serialize` impl.
+///
+/// `AppError`'s wire format (`{ status, message }`) is hand-written and bears no resemblance
+/// to the enum's Rust shape, so deriving `specta::Type` on the enum would misdescribe it.
+/// Instead this struct captures the real payload shape and `AppError`'s `Type` impl delegates
+/// to it, keeping the generated TypeScript error type in sync with what the frontend receives.
+#[derive(specta::Type)]
+#[allow(dead_code)]
+struct AppErrorShape {
+    status: u16,
+    message: String,
+}
+
+impl specta::Type for AppError {
+    fn inline(
+        type_map: &mut specta::TypeMap,
+        generics: specta::Generics,
+    ) -> specta::datatype::DataType {
+        <AppErrorShape as specta::Type>::inline(type_map, generics)
     }
 }
 

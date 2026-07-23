@@ -10,7 +10,7 @@ desktop build:
 |---|---|---|
 | [`finance/`](./finance) | Backend — REST API | Rust · Axum · SQLx · PostgreSQL |
 | [`financejs/`](./financejs) | Frontend — Web app (SPA) | React 19 · MUI 9 · Vite |
-| [`finance-tauri/`](./finance-tauri) | Desktop app (POC) — single local `.exe` | Tauri 2 · React 19 · SQLx · SQLite (native IPC) |
+| [`finance-tauri/`](./finance-tauri) | Desktop app (POC) — single local `.exe` | Tauri 2 · React 19 · SQLx · SQLite · tauri-specta (type‑safe IPC) |
 
 Each subproject has its own detailed `README.md` (and the two web projects a `MIGRATION.md`). This
 root README is the shared overview and **quickstart** to get the web stack running; the desktop POC

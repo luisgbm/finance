@@ -129,13 +129,6 @@ pub struct PostCategory {
 pub type PatchCategory = PostCategory;
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct PostAccount {
-    pub name: String,
-}
-
-pub type PatchAccount = PostAccount;
-
-#[derive(Debug, Serialize, Deserialize)]
 pub struct PostTransaction {
     pub value: i32,
     pub description: String,

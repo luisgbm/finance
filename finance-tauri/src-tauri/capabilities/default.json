@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Default capability for the main window. The frontend talks to the embedded HTTP backend directly (axios); it also forwards console output to the log plugin.",
+  "description": "Default capability for the main window. The frontend calls Rust via Tauri IPC commands (core:default) and forwards its console output to the log plugin (log:default). Custom commands need no explicit permission.",
   "windows": ["main"],
   "permissions": ["core:default", "log:default"]
 }

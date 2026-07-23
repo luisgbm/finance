@@ -1,10 +1,12 @@
-use axum::http::StatusCode;
-use axum::response::{IntoResponse, Response};
-use axum::Json;
-use serde_json::json;
+use serde::ser::SerializeStruct;
+use serde::{Serialize, Serializer};
 
-/// Application-wide error type. Each variant maps to an HTTP status code, mirroring the
-/// status codes returned by the original backend.
+/// Application-wide error type. Each variant maps to an HTTP-style status code, preserved
+/// from the original REST backend so the React frontend's `err.response.status` checks
+/// (401 -> logout, 409 -> "user exists") keep working after the move to Tauri IPC.
+///
+/// When a command returns `Err(AppError)`, Tauri serializes it (via the `Serialize` impl
+/// below) and the JS `invoke(...)` promise rejects with `{ status, message }`.
 #[derive(Debug, thiserror::Error)]
 pub enum AppError {
     #[error("unauthorized")]
@@ -20,24 +22,33 @@ pub enum AppError {
 }
 
 impl AppError {
-    fn status(&self) -> StatusCode {
+    /// The HTTP-style status code the frontend inspects. No longer an `axum` `StatusCode`
+    /// now that responses travel over IPC rather than HTTP.
+    fn status_code(&self) -> u16 {
         match self {
-            AppError::Unauthorized => StatusCode::UNAUTHORIZED,
-            AppError::NotFound => StatusCode::NOT_FOUND,
-            AppError::Conflict => StatusCode::CONFLICT,
-            AppError::BadRequest => StatusCode::BAD_REQUEST,
-            AppError::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            AppError::Unauthorized => 401,
+            AppError::NotFound => 404,
+            AppError::Conflict => 409,
+            AppError::BadRequest => 400,
+            AppError::Internal(_) => 500,
         }
     }
 }
 
-impl IntoResponse for AppError {
-    fn into_response(self) -> Response {
-        let status = self.status();
-        if let AppError::Internal(ref message) = self {
+impl Serialize for AppError {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        // Serialization is the single choke point through which every command error passes,
+        // so log internal failures here (their detail is not otherwise surfaced to the UI).
+        if let AppError::Internal(message) = self {
             log::error!("internal error: {}", message);
         }
-        (status, Json(json!({ "error": self.to_string() }))).into_response()
+        let mut state = serializer.serialize_struct("AppError", 2)?;
+        state.serialize_field("status", &self.status_code())?;
+        state.serialize_field("message", &self.to_string())?;
+        state.end()
     }
 }
 

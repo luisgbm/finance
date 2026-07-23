@@ -1,70 +1,61 @@
-import finance from './finance';
+import { invokeApi } from './finance';
 
-const getWithAuth = async (url) => {
-    try {
-        return await finance.get(url, authenticationService.getAuthHeader());
-    } catch (e) {
-        if (e.response.status === 401) logout();
-        throw(e);
+// The logged-in user's id, persisted (as a string) in localStorage under 'token'. Since the
+// JWT was dropped in the IPC migration, this id is sent as the `user_id` argument on every
+// authenticated command; persisting it keeps the user logged in across app restarts, exactly
+// as the JWT did before.
+const getUserId = () => {
+    const stored = localStorage.getItem('token');
+    if (stored == null) {
+        return null;
     }
-}
+    const id = parseInt(stored, 10);
+    return Number.isNaN(id) ? null : id;
+};
 
-const postWithAuth = async (url, body) => {
-    try {
-        return await finance.post(url, body, authenticationService.getAuthHeader());
-    } catch (e) {
-        if (e.response.status === 401) logout();
-        throw(e);
-    }
-}
+const unauthorizedError = () => {
+    const e = new Error('unauthorized');
+    e.response = { status: 401, data: { error: 'unauthorized' } };
+    return e;
+};
 
-const patchWithAuth = async (url, body) => {
-    try {
-        return await finance.patch(url, body, authenticationService.getAuthHeader());
-    } catch (e) {
-        if (e.response.status === 401) logout();
-        throw(e);
+// Invoke an authenticated command, injecting the current user's id. Logs out (clears the
+// stored id) on a 401, matching the original axios interceptor behaviour.
+const callAuthed = async (command, args = {}) => {
+    const userId = getUserId();
+    if (userId == null) {
+        logout();
+        throw unauthorizedError();
     }
-}
-
-const deleteWithAuth = async (url) => {
     try {
-        return await finance.delete(url, authenticationService.getAuthHeader());
+        return await invokeApi(command, { userId, ...args });
     } catch (e) {
-        if (e.response.status === 401) logout();
-        throw(e);
+        if (e.response && e.response.status === 401) {
+            logout();
+        }
+        throw e;
     }
-}
+};
 
 const newUser = async (name, password) => {
     try {
-        const result = await finance.post('/users', {
-            name,
-            password
-        });
-
+        const result = await invokeApi('register', { req: { name, password } });
         localStorage.setItem('token', result.data.token);
-
         return result.data;
     } catch (e) {
         logout();
-        throw(e);
+        throw e;
     }
 };
 
 const login = async (name, password) => {
     try {
-        const result = await finance.post('/login', {
-            name,
-            password
-        });
-
+        const result = await invokeApi('login', { req: { name, password } });
         localStorage.setItem('token', result.data.token);
-
         return result.data;
     } catch (e) {
         logout();
-        throw(e);
+        throw e;
     }
 };
 
@@ -77,29 +68,16 @@ const validateToken = async () => {
         if (localStorage.getItem('token') == null) {
             return null;
         }
-
-        return await getWithAuth('/token');
+        return await callAuthed('get_initial_data');
     } catch {
         return null;
     }
 };
 
-const getAuthHeader = () => {
-    return {
-        headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-    };
-}
-
 export const authenticationService = {
     login,
     logout,
     newUser,
-    getWithAuth,
-    postWithAuth,
-    patchWithAuth,
-    deleteWithAuth,
-    validateToken,
-    getAuthHeader
+    callAuthed,
+    validateToken
 };

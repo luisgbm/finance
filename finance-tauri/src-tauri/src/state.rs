@@ -1,13 +1,13 @@
-use std::sync::Arc;
-
 use sqlx::SqlitePool;
 
 use crate::config::Config;
 
-/// Shared application state injected into every handler via `axum::extract::State`.
-/// Identical in shape to the original Postgres backend, except the pool is a SQLite pool.
-#[derive(Clone)]
+/// Shared application state, registered once with `app.manage(...)` during setup and
+/// injected into every command via `tauri::State<'_, AppState>`.
+///
+/// The SQLite pool is internally reference-counted and safe to share across concurrent
+/// commands, so no `Mutex` is needed.
 pub struct AppState {
     pub pool: SqlitePool,
-    pub config: Arc<Config>,
+    pub config: Config,
 }

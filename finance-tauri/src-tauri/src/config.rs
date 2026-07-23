@@ -3,26 +3,18 @@ use std::str::FromStr;
 
 /// Application configuration for the local desktop build.
 ///
-/// The original server loaded these from environment variables / a `.env` file. In the
-/// desktop POC there is a single local user-facing process, so everything has a built-in
-/// default; the env vars remain as optional overrides (useful for tests / debugging).
-///
-/// `jwt_secret` is intentionally a fixed local value so the token persisted by the web
-/// frontend (in localStorage) keeps working across app restarts. `jwt_validity_days` is
-/// large for the same reason.
+/// With the move to Tauri IPC there is no JWT any more (the frontend passes the logged-in
+/// user id directly), so the only remaining setting is the bcrypt cost used when hashing
+/// new passwords. It has a built-in default; the env var remains as an optional override
+/// (useful for tests / debugging).
 #[derive(Debug, Clone)]
 pub struct Config {
-    pub jwt_secret: String,
-    pub jwt_validity_days: i64,
     pub bf_rounds: i32,
 }
 
 impl Config {
     pub fn local() -> Self {
         Self {
-            jwt_secret: env::var("FINANCE_JWT_SECRET")
-                .unwrap_or_else(|_| "finance-tauri-local-poc-secret".to_string()),
-            jwt_validity_days: parse_env("FINANCE_JWT_VALIDITY_DAYS", 3650),
             bf_rounds: parse_env("FINANCE_BF_ROUNDS", 10),
         }
     }

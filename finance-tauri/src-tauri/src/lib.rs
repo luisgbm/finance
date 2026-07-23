@@ -1,15 +1,20 @@
-mod auth;
-pub mod bootstrap;
+mod bootstrap;
+mod commands;
 mod config;
 mod db;
 mod error;
-mod handlers;
 mod models;
 mod service;
 mod state;
 
+#[cfg(test)]
+mod tests;
+
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_log::{Target, TargetKind};
+
+use crate::config::Config;
+use crate::state::AppState;
 
 /// Show a native error dialog for an unrecoverable startup failure and exit.
 ///
@@ -29,17 +34,16 @@ fn fatal_startup_error(message: &str) -> ! {
 
 /// Application entry point (shared by the desktop binary and any mobile entry point).
 ///
-/// On startup it:
-///   1. resolves a writable SQLite path in the OS app-data directory,
-///   2. starts the embedded Axum + SQLite backend on an ephemeral loopback port, and
-///   3. creates the main window, injecting the backend base URL as a JS global *before*
-///      any page script runs so the reused React frontend targets the local API.
+/// On startup it opens the SQLite database in the OS app-data directory, registers the
+/// shared [`AppState`] so every IPC command can reach the pool, and then creates the main
+/// window. The React frontend talks to Rust exclusively through Tauri commands (see
+/// `commands.rs`) — there is no local HTTP server or port any more.
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let mut builder = tauri::Builder::default();
 
     // The single-instance guard must be the first plugin registered. It focuses the
-    // already-running window instead of launching a second backend/pool/window.
+    // already-running window instead of launching a second database/pool/window.
     #[cfg(desktop)]
     {
         builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
@@ -70,37 +74,67 @@ pub fn run() {
             // A per-user, writable location for the database file.
             let data_dir = match app.path().app_data_dir() {
                 Ok(dir) => dir,
-                Err(err) => {
-                    fatal_startup_error(&format!(
-                        "Could not resolve the application data directory:\n\n{err}"
-                    ))
-                }
+                Err(err) => fatal_startup_error(&format!(
+                    "Could not resolve the application data directory:\n\n{err}"
+                )),
             };
             std::fs::create_dir_all(&data_dir).ok();
             let db_path = data_dir.join("finance.db");
 
-            // Start the embedded backend and learn which port it bound to. block_on is fine
-            // here: setup runs on the main thread, not on an async runtime worker.
-            let port = match tauri::async_runtime::block_on(bootstrap::start(&db_path)) {
-                Ok(port) => port,
+            // Open the pool and apply the schema. block_on is fine here: setup runs on the
+            // main thread, not on an async runtime worker.
+            let pool = match tauri::async_runtime::block_on(bootstrap::init(&db_path)) {
+                Ok(pool) => pool,
                 Err(err) => fatal_startup_error(&format!(
-                    "Could not start the local Finance backend:\n\n{err:#}"
+                    "Could not open the local Finance database:\n\n{err:#}"
                 )),
             };
 
-            // Runs before the page's own scripts, so window.__FINANCE_API_BASE__ is already
-            // set by the time src/api/finance.js constructs its axios client.
-            let init_script =
-                format!("window.__FINANCE_API_BASE__ = 'http://127.0.0.1:{port}/api';");
+            // Register shared state *before* the window is created, so the frontend can never
+            // load and invoke a command before the pool is available.
+            app.manage(AppState {
+                pool,
+                config: Config::local(),
+            });
 
             WebviewWindowBuilder::new(app, "main", WebviewUrl::default())
                 .title("Finance")
                 .inner_size(1280.0, 800.0)
-                .initialization_script(&init_script)
                 .build()?;
 
             Ok(())
         })
+        .invoke_handler(tauri::generate_handler![
+            commands::register,
+            commands::login,
+            commands::get_initial_data,
+            commands::create_account,
+            commands::get_accounts,
+            commands::get_account,
+            commands::update_account,
+            commands::delete_account,
+            commands::create_category,
+            commands::get_categories,
+            commands::get_categories_by_type,
+            commands::get_category,
+            commands::update_category,
+            commands::delete_category,
+            commands::create_transaction,
+            commands::get_transactions_for_account,
+            commands::get_transaction,
+            commands::update_transaction,
+            commands::delete_transaction,
+            commands::create_transfer,
+            commands::get_transfer,
+            commands::update_transfer,
+            commands::delete_transfer,
+            commands::create_scheduled_transaction,
+            commands::get_scheduled_transactions,
+            commands::get_scheduled_transaction,
+            commands::update_scheduled_transaction,
+            commands::delete_scheduled_transaction,
+            commands::pay_scheduled_transaction,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running the Finance application");
 }

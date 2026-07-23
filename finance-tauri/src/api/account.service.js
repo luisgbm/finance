@@ -1,36 +1,26 @@
 import {authenticationService} from "./authentication.service";
 
 const getAllAccounts = async () => {
-    const accounts = await authenticationService.getWithAuth('/accounts');
+    const accounts = await authenticationService.callAuthed('get_accounts');
     return accounts.data;
 };
 
 const getAccountById = async (accountId) => {
-    try {
-        return await authenticationService.getWithAuth(`/accounts/${accountId}`);
-    } catch (e) {
-        throw(e);
-    }
+    return await authenticationService.callAuthed('get_account', {accountId});
 };
 
 const newAccount = async (name) => {
-    const account = await authenticationService.postWithAuth('/accounts', {
-        name
-    });
-
+    const account = await authenticationService.callAuthed('create_account', {name});
     return account.data;
 };
 
 const editAccountById = async (accountId, name) => {
-    const account = await authenticationService.patchWithAuth(`/accounts/${accountId}`, {
-        name
-    });
-
+    const account = await authenticationService.callAuthed('update_account', {accountId, name});
     return account.data;
 };
 
 const deleteAccountById = async (accountId) => {
-    return await authenticationService.deleteWithAuth(`/accounts/${accountId}`);
+    return await authenticationService.callAuthed('delete_account', {accountId});
 };
 
 export const accountService = {

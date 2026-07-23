@@ -1,7 +1,7 @@
 [package]
 name = "finance-tauri"
 version = "0.1.0"
-description = "Finance desktop POC (Tauri + embedded Axum + SQLite)"
+description = "Finance desktop POC (Tauri + embedded SQLite, native IPC commands)"
 authors = ["Luís Mendes <luisgbm@gmail.com>"]
 edition = "2021"
 
@@ -25,9 +25,6 @@ log = "0.4"
 # Native message dialog for fatal startup errors, shown before the window/event loop exists
 # (so tauri-plugin-dialog's main-thread-dispatched blocking_show would deadlock here).
 rfd = { version = "0.15", default-features = false }
-axum = "0.8"
-tokio = { version = "1", features = ["full"] }
-tower-http = { version = "0.7", features = ["cors", "trace"] }
 # SQLite driver, statically bundled (the `sqlite` feature compiles SQLite from source), so
 # the finished .exe needs no external database DLL. Function-form queries only -> no `macros`.
 sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "sqlite", "chrono", "derive"] }
@@ -35,10 +32,8 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 chrono = { version = "0.4", features = ["serde"] }
 chronoutil = "0.2"
-jsonwebtoken = { version = "10", features = ["rust_crypto"] }
 # Replaces the Postgres pgcrypto-based password hashing with an in-process bcrypt.
 bcrypt = "0.15"
-tracing = "0.1"
 thiserror = "2"
 anyhow = "1"
 
@@ -51,5 +46,5 @@ opt-level = "s"
 strip = true
 
 [dev-dependencies]
-# HTTP client for the end-to-end API integration test (localhost only, so no TLS backend).
-reqwest = { version = "0.12", default-features = false, features = ["json"] }
+# Async test runtime for the integration test (which drives the service/db layer directly).
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }

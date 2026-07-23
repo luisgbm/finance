@@ -2,7 +2,6 @@ use chrono::{Duration, NaiveDateTime};
 use chronoutil::RelativeDuration;
 use sqlx::SqlitePool;
 
-use crate::auth;
 use crate::db;
 use crate::db::transactions::TxJoinRow;
 use crate::db::transfers::{TransferFromRow, TransferToRow};
@@ -11,7 +10,6 @@ use crate::models::{
     CategoryTypes, GetAccount, GetScheduledTransaction, InitialData, RepeatFrequencies,
     ScheduledTransaction, ScheduledTransactionKinds, TransactionTransferJoined,
 };
-use crate::state::AppState;
 
 /// Load all of a user's accounts, each with its computed balance.
 pub async fn accounts_with_balance(
@@ -34,22 +32,21 @@ pub async fn accounts_with_balance(
     Ok(result)
 }
 
-/// Build the `InitialData` payload returned by login / register / token-refresh.
+/// Build the `InitialData` payload returned by login / register / initial-data fetch.
+///
+/// Since the JWT was dropped in the IPC migration, the `token` field now simply carries the
+/// user id as a string. The frontend still persists it in `localStorage['token']` and sends
+/// it back as the `user_id` argument on every authenticated command, so login survives an
+/// app restart exactly as before.
 pub async fn build_initial_data(
-    state: &AppState,
+    pool: &SqlitePool,
     user_id: i32,
 ) -> Result<InitialData, AppError> {
-    let token = auth::create_jwt(
-        user_id,
-        &state.config.jwt_secret,
-        state.config.jwt_validity_days,
-    )?;
-
     Ok(InitialData {
-        token,
-        accounts: accounts_with_balance(&state.pool, user_id).await?,
-        categories: db::categories::get_all(&state.pool, user_id).await?,
-        scheduled_transactions: all_scheduled_enriched(&state.pool, user_id).await?,
+        token: user_id.to_string(),
+        accounts: accounts_with_balance(pool, user_id).await?,
+        categories: db::categories::get_all(pool, user_id).await?,
+        scheduled_transactions: all_scheduled_enriched(pool, user_id).await?,
     })
 }
 
@@ -70,8 +67,8 @@ pub async fn all_scheduled_enriched(
 }
 
 /// Enrich a scheduled transaction with the names/types of its referenced accounts and
-/// category. A missing reference is treated as an internal error (HTTP 500), matching the
-/// original behaviour where an unresolved join aborted the whole request.
+/// category. A missing reference is treated as an internal error, matching the original
+/// behaviour where an unresolved join aborted the whole request.
 pub async fn enrich_scheduled(
     pool: &SqlitePool,
     st: &ScheduledTransaction,

@@ -1,0 +1,48 @@
+[package]
+name = "finance-tauri"
+version = "0.1.0"
+description = "Finance desktop POC (Tauri + embedded Axum + SQLite)"
+authors = ["Luís Mendes <luisgbm@gmail.com>"]
+edition = "2021"
+
+[lib]
+# The desktop binary (main.rs) links against this lib; the mobile/staticlib/cdylib crate
+# types are the Tauri v2 convention. The name is referenced from main.rs as
+# `finance_tauri_lib::run()`.
+name = "finance_tauri_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+axum = "0.8"
+tokio = { version = "1", features = ["full"] }
+tower-http = { version = "0.7", features = ["cors", "trace"] }
+# SQLite driver, statically bundled (the `sqlite` feature compiles SQLite from source), so
+# the finished .exe needs no external database DLL. Function-form queries only -> no `macros`.
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "sqlite", "chrono", "derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+chrono = { version = "0.4", features = ["serde"] }
+chronoutil = "0.2"
+jsonwebtoken = { version = "10", features = ["rust_crypto"] }
+# Replaces the Postgres pgcrypto-based password hashing with an in-process bcrypt.
+bcrypt = "0.15"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+thiserror = "2"
+anyhow = "1"
+
+[profile.release]
+# Smaller, self-contained release binary.
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true
+
+[dev-dependencies]
+# HTTP client for the end-to-end API integration test (localhost only, so no TLS backend).
+reqwest = { version = "0.12", default-features = false, features = ["json"] }

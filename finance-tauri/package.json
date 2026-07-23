@@ -1,0 +1,38 @@
+{
+  "name": "finance-tauri",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Finance — local-only desktop POC (Tauri + React + embedded Axum/SQLite).",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview --port 1420",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@fontsource/roboto": "^5.1.0",
+    "@mui/icons-material": "^9.1.1",
+    "@mui/material": "^9.1.1",
+    "@mui/x-date-pickers": "^9.5.0",
+    "@reduxjs/toolkit": "^2.12.0",
+    "axios": "^1.18.0",
+    "currency.js": "^2.0.4",
+    "formik": "^2.4.9",
+    "moment": "^2.30.1",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-redux": "^9.3.0",
+    "react-router-dom": "^7.18.0",
+    "redux-persist": "^6.0.0",
+    "yup": "^1.7.1"
+  },
+  "devDependencies": {
+    "@tauri-apps/api": "^2",
+    "@tauri-apps/cli": "^2",
+    "@vitejs/plugin-react": "^6.0.2",
+    "vite": "^8.0.16"
+  }
+}

@@ -3,15 +3,18 @@
 **Finance** is a personal money manager: track your accounts, categorize income and
 expenses, record transactions and transfers, and plan recurring scheduled transactions.
 
-This is a **monorepo** containing both halves of the application:
+This is a **monorepo** containing both halves of the web application, plus an experimental
+desktop build:
 
 | Path | Component | Stack |
 |---|---|---|
 | [`finance/`](./finance) | Backend — REST API | Rust · Axum · SQLx · PostgreSQL |
 | [`financejs/`](./financejs) | Frontend — Web app (SPA) | React 19 · MUI 9 · Vite |
+| [`finance-tauri/`](./finance-tauri) | Desktop app (POC) — single local `.exe` | Tauri 2 · React 19 · Axum · SQLite |
 
-Each subproject has its own detailed `README.md` and `MIGRATION.md`. This root README is the
-shared overview and **quickstart** to get the whole thing running.
+Each subproject has its own detailed `README.md` (and the two web projects a `MIGRATION.md`). This
+root README is the shared overview and **quickstart** to get the web stack running; the desktop POC
+has its own build instructions in [`finance-tauri/README.md`](./finance-tauri/README.md).
 
 ---
 
@@ -126,6 +129,7 @@ cached, and code changes hot‑reload (frontend) or rebuild with `docker compose
 .
 ├── finance/             # Rust/Axum REST API   (own README.md + MIGRATION.md + Dockerfile)
 ├── financejs/           # React/Vite web app   (own README.md + MIGRATION.md + Dockerfile)
+├── finance-tauri/       # Tauri desktop POC    (own README.md; single-exe, embedded SQLite)
 ├── docker-compose.yml   # full dev stack: db + backend + frontend
 ├── .env.example         # compose configuration template (copy to .env)
 └── README.md            # you are here (shared overview + quickstart)
@@ -140,4 +144,5 @@ History for both subprojects is preserved under their respective directories
 
 - Backend details & API: [`finance/README.md`](./finance/README.md)
 - Frontend details & usage: [`financejs/README.md`](./financejs/README.md)
+- Desktop app (Tauri POC): [`finance-tauri/README.md`](./finance-tauri/README.md)
 - Migration reports: [`finance/MIGRATION.md`](./finance/MIGRATION.md), [`financejs/MIGRATION.md`](./financejs/MIGRATION.md)

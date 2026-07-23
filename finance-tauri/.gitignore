@@ -1,0 +1,19 @@
+# Node / frontend
+node_modules
+dist
+dist-ssr
+*.local
+
+# Rust / Tauri
+src-tauri/target
+src-tauri/gen/schemas
+
+# Local SQLite databases (created at runtime in the OS app-data dir, but ignore any
+# that end up here during development/testing)
+*.db
+*.db-wal
+*.db-shm
+
+# Logs / editor
+*.log
+.DS_Store

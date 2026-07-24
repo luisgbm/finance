@@ -13,10 +13,7 @@ use sqlx::SqlitePool;
 /// runs exactly once and only newer ones run on an existing database.
 ///
 /// Append-only: never edit or reorder an existing entry once it has shipped — add a new one.
-const MIGRATIONS: &[&str] = &[
-    include_str!("migrations/0001_initial.sql"),
-    include_str!("migrations/0002_sessions.sql"),
-];
+const MIGRATIONS: &[&str] = &[include_str!("migrations/0001_initial.sql")];
 
 /// Open (creating if needed) the SQLite database at `db_path` and bring its schema up to
 /// date, returning a ready-to-use connection pool.

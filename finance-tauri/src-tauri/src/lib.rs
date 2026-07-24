@@ -1,6 +1,5 @@
 mod bootstrap;
 mod commands;
-mod config;
 mod db;
 mod error;
 mod models;
@@ -13,7 +12,6 @@ mod tests;
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_log::{Target, TargetKind};
 
-use crate::config::Config;
 use crate::state::AppState;
 
 /// Show a native error dialog for an unrecoverable startup failure and exit.
@@ -70,9 +68,6 @@ fn install_panic_hook() {
 /// to be registered for both wiring and type generation.
 pub(crate) fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
     tauri_specta::Builder::<tauri::Wry>::new().commands(tauri_specta::collect_commands![
-        commands::register,
-        commands::login,
-        commands::logout,
         commands::get_initial_data,
         commands::create_account,
         commands::get_accounts,
@@ -209,10 +204,7 @@ pub fn run() {
 
             // Register shared state *before* the window is created, so the frontend can never
             // load and invoke a command before the pool is available.
-            app.manage(AppState {
-                pool,
-                config: Config::local(),
-            });
+            app.manage(AppState { pool });
 
             WebviewWindowBuilder::new(app, "main", WebviewUrl::default())
                 .title("Finance")

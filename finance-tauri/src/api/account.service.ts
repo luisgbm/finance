@@ -1,26 +1,26 @@
-import { commands, call, requireToken } from './finance';
+import { commands, call } from './finance';
 
 const getAllAccounts = async () => {
-    const { data } = await call(commands.getAccounts(requireToken()));
+    const { data } = await call(commands.getAccounts());
     return data;
 };
 
 const getAccountById = async (accountId: number) => {
-    return await call(commands.getAccount(requireToken(), accountId));
+    return await call(commands.getAccount(accountId));
 };
 
 const newAccount = async (name: string) => {
-    const { data } = await call(commands.createAccount(requireToken(), name));
+    const { data } = await call(commands.createAccount(name));
     return data;
 };
 
 const editAccountById = async (accountId: number, name: string) => {
-    const { data } = await call(commands.updateAccount(requireToken(), accountId, name));
+    const { data } = await call(commands.updateAccount(accountId, name));
     return data;
 };
 
 const deleteAccountById = async (accountId: number) => {
-    return await call(commands.deleteAccount(requireToken(), accountId));
+    return await call(commands.deleteAccount(accountId));
 };
 
 export const accountService = {

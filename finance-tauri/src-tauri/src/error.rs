@@ -3,7 +3,7 @@ use serde::{Serialize, Serializer};
 
 /// Application-wide error type. Each variant maps to an HTTP-style status code, preserved
 /// from the original REST backend so the React frontend's `err.response.status` checks
-/// (401 -> logout, 409 -> "user exists") keep working after the move to Tauri IPC.
+/// (e.g. 409 -> "already exists") keep working after the move to Tauri IPC.
 ///
 /// When a command returns `Err(AppError)`, Tauri serializes it (via the `Serialize` impl
 /// below) and the JS `invoke(...)` promise rejects with `{ status, message }`. The
@@ -11,8 +11,6 @@ use serde::{Serialize, Serializer};
 /// generated TypeScript bindings type each command's error accurately.
 #[derive(Debug, thiserror::Error)]
 pub enum AppError {
-    #[error("unauthorized")]
-    Unauthorized,
     #[error("not found")]
     NotFound,
     #[error("conflict")]
@@ -28,7 +26,6 @@ impl AppError {
     /// now that responses travel over IPC rather than HTTP.
     fn status_code(&self) -> u16 {
         match self {
-            AppError::Unauthorized => 401,
             AppError::NotFound => 404,
             AppError::Conflict => 409,
             AppError::BadRequest => 400,
@@ -76,8 +73,8 @@ impl specta::Type for AppError {
     }
 }
 
-/// Translate a sqlx error into an `AppError`. A unique-violation becomes `Conflict`
-/// (e.g. duplicate user name); a missing row becomes `NotFound`; everything else is `Internal`.
+/// Translate a sqlx error into an `AppError`. A unique-violation becomes `Conflict`;
+/// a missing row becomes `NotFound`; everything else is `Internal`.
 impl From<sqlx::Error> for AppError {
     fn from(err: sqlx::Error) -> Self {
         match err {
@@ -85,12 +82,5 @@ impl From<sqlx::Error> for AppError {
             sqlx::Error::Database(ref db_err) if db_err.is_unique_violation() => AppError::Conflict,
             other => AppError::Internal(other.to_string()),
         }
-    }
-}
-
-/// Password hashing errors (bcrypt) are always internal failures.
-impl From<bcrypt::BcryptError> for AppError {
-    fn from(err: bcrypt::BcryptError) -> Self {
-        AppError::Internal(format!("password hashing error: {err}"))
     }
 }

@@ -45,26 +45,17 @@ pub enum RepeatFrequencies {
 // Database row models
 // ---------------------------------------------------------------------------
 
-#[derive(sqlx::FromRow, Debug, Serialize, Deserialize)]
-pub struct AppUser {
-    pub id: i32,
-    pub name: String,
-    pub password: String,
-}
-
 #[derive(sqlx::FromRow, specta::Type, Debug, Serialize, Deserialize)]
 pub struct Category {
     pub id: i32,
     pub categorytype: CategoryTypes,
     pub name: String,
-    pub user_id: i32,
 }
 
 #[derive(sqlx::FromRow, specta::Type, Debug, Serialize, Deserialize)]
 pub struct Account {
     pub id: i32,
     pub name: String,
-    pub user_id: i32,
 }
 
 #[derive(sqlx::FromRow, specta::Type, Debug, Serialize, Deserialize)]
@@ -75,7 +66,6 @@ pub struct Transaction {
     pub date: NaiveDateTime,
     pub account: i32,
     pub category: i32,
-    pub user_id: i32,
 }
 
 #[derive(sqlx::FromRow, specta::Type, Debug, Serialize, Deserialize)]
@@ -86,7 +76,6 @@ pub struct Transfer {
     pub value: i32,
     pub description: String,
     pub date: NaiveDateTime,
-    pub user_id: i32,
 }
 
 #[derive(sqlx::FromRow, specta::Type, Debug, Serialize, Deserialize)]
@@ -107,18 +96,11 @@ pub struct ScheduledTransaction {
     pub end_after_repeats: Option<i32>,
     pub current_repeat_count: Option<i32>,
     pub next_date: Option<NaiveDateTime>,
-    pub user_id: i32,
 }
 
 // ---------------------------------------------------------------------------
 // Request DTOs (deserialized from JSON request bodies)
 // ---------------------------------------------------------------------------
-
-#[derive(specta::Type, Debug, Serialize, Deserialize)]
-pub struct NewAppUser {
-    pub name: String,
-    pub password: String,
-}
 
 #[derive(specta::Type, Debug, Serialize, Deserialize)]
 pub struct PostCategory {
@@ -190,7 +172,6 @@ pub struct NewTransactionData {
     pub date: NaiveDateTime,
     pub account: i32,
     pub category: i32,
-    pub user_id: i32,
 }
 
 /// Internal (non-serialized) value object used to insert/update a transfer row.
@@ -201,7 +182,6 @@ pub struct NewTransferData {
     pub value: i32,
     pub description: String,
     pub date: NaiveDateTime,
-    pub user_id: i32,
 }
 
 /// Internal (non-serialized) value object used to insert/update a scheduled transaction row.
@@ -222,7 +202,6 @@ pub struct NewScheduledTransaction {
     pub end_after_repeats: Option<i32>,
     pub current_repeat_count: Option<i32>,
     pub next_date: Option<NaiveDateTime>,
-    pub user_id: i32,
 }
 
 #[derive(specta::Type, Debug, Serialize, Deserialize)]
@@ -242,7 +221,6 @@ pub struct PostScheduledTransactionPay {
 
 #[derive(specta::Type, Debug, Serialize, Deserialize)]
 pub struct InitialData {
-    pub token: String,
     pub accounts: Vec<GetAccount>,
     pub categories: Vec<Category>,
     pub scheduled_transactions: Vec<GetScheduledTransaction>,
@@ -253,7 +231,6 @@ pub struct GetAccount {
     pub id: i32,
     pub name: String,
     pub balance: i32,
-    pub user_id: i32,
 }
 
 #[derive(specta::Type, Debug, Serialize, Deserialize)]
@@ -267,7 +244,6 @@ pub struct TransactionTransferJoined {
     pub category_name: Option<String>,
     pub account_id: i32,
     pub account_name: String,
-    pub user_id: i32,
     pub from_account_id: Option<i32>,
     pub from_account_name: Option<String>,
 }
@@ -295,5 +271,4 @@ pub struct GetScheduledTransaction {
     pub end_after_repeats: Option<i32>,
     pub current_repeat_count: Option<i32>,
     pub next_date: Option<NaiveDateTime>,
-    pub user_id: i32,
 }

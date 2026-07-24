@@ -1,12 +1,14 @@
 //! End-to-end integration test for the embedded SQLite backend, exercised directly through
 //! the `db` / `service` / command-helper layers (there is no HTTP server any more).
 //!
-//! It drives the full original flow against a throwaway SQLite database — register -> auth ->
-//! accounts -> categories -> transactions -> balance -> transfers -> scheduled transaction ->
-//! pay -> foreign-key cascade — validating the whole Postgres->SQLite port (placeholders,
-//! bcrypt auth, enum-as-TEXT, the shared transaction/transfer id sequence, balance
-//! computation and FK cascades) plus the scheduled-transaction build/pay logic that the
-//! Tauri commands delegate to.
+//! It drives the full flow against a throwaway SQLite database — accounts -> categories ->
+//! transactions -> balance -> transfers -> scheduled transaction -> pay -> foreign-key
+//! cascade — validating the whole Postgres->SQLite port (placeholders, enum-as-TEXT, the
+//! shared transaction/transfer id sequence, balance computation and FK cascades) plus the
+//! scheduled-transaction build/pay logic that the Tauri commands delegate to.
+//!
+//! This desktop build is single-user with no authentication, so there are no users, sessions
+//! or `user_id` scoping to exercise here.
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -47,72 +49,25 @@ fn dt(value: &str) -> NaiveDateTime {
 #[tokio::test]
 async fn full_flow() {
     let pool = fresh_pool().await;
-    let bf_rounds = 4; // minimum bcrypt cost keeps the test fast
-
-    // ----- register + duplicate handling ------------------------------------------------
-    let user = db::users::insert(&pool, "tester", "s3cret", bf_rounds)
-        .await
-        .expect("register should succeed");
-    let duplicate = db::users::insert(&pool, "tester", "whatever", bf_rounds).await;
-    assert!(
-        matches!(duplicate, Err(AppError::Conflict)),
-        "duplicate user name maps the UNIQUE violation to Conflict"
-    );
-    let user_id = user.id;
-
-    // ----- authentication ---------------------------------------------------------------
-    assert!(
-        db::users::authenticate(&pool, "tester", "s3cret")
-            .await
-            .unwrap()
-            .is_some(),
-        "correct password authenticates"
-    );
-    assert!(
-        db::users::authenticate(&pool, "tester", "wrong")
-            .await
-            .unwrap()
-            .is_none(),
-        "wrong password does not authenticate"
-    );
-
-    // ----- session tokens (create / resolve / reject unknown) ---------------------------
-    let token = db::sessions::create(&pool, user_id).await.unwrap();
-    assert_eq!(
-        db::sessions::resolve(&pool, &token).await.unwrap(),
-        user_id,
-        "a freshly minted token resolves to its user"
-    );
-    assert!(
-        matches!(
-            db::sessions::resolve(&pool, "not-a-real-token").await,
-            Err(AppError::Unauthorized)
-        ),
-        "an unknown token is rejected as unauthorized"
-    );
 
     // ----- initial payload --------------------------------------------------------------
-    let initial = service::build_initial_data(&pool, user_id, token.clone())
-        .await
-        .unwrap();
-    assert_eq!(
-        initial.token, token,
-        "initial payload echoes the session token it was built with"
-    );
+    let initial = service::build_initial_data(&pool).await.unwrap();
     assert!(initial.accounts.is_empty());
+    assert!(initial.categories.is_empty());
+    assert!(initial.scheduled_transactions.is_empty());
 
     // ----- accounts ---------------------------------------------------------------------
-    let checking = db::accounts::insert(&pool, "Checking", user_id).await.unwrap();
-    let savings = db::accounts::insert(&pool, "Savings", user_id).await.unwrap();
+    let checking = db::accounts::insert(&pool, "Checking").await.unwrap();
+    let savings = db::accounts::insert(&pool, "Savings").await.unwrap();
 
     // ----- categories (enum stored as TEXT) ---------------------------------------------
-    let salary = db::categories::insert(&pool, CategoryTypes::Income, "Salary", user_id)
+    let salary = db::categories::insert(&pool, CategoryTypes::Income, "Salary")
         .await
         .unwrap();
-    let groceries = db::categories::insert(&pool, CategoryTypes::Expense, "Groceries", user_id)
+    let groceries = db::categories::insert(&pool, CategoryTypes::Expense, "Groceries")
         .await
         .unwrap();
-    let income_cats = db::categories::get_all_by_type(&pool, CategoryTypes::Income, user_id)
+    let income_cats = db::categories::get_all_by_type(&pool, CategoryTypes::Income)
         .await
         .unwrap();
     assert_eq!(income_cats.len(), 1, "type filter returns only the income category");
@@ -126,7 +81,6 @@ async fn full_flow() {
             date: dt("2024-01-05T09:00:00"),
             account: checking.id,
             category: salary.id,
-            user_id,
         },
     )
     .await
@@ -139,14 +93,13 @@ async fn full_flow() {
             date: dt("2024-01-06T18:30:00"),
             account: checking.id,
             category: groceries.id,
-            user_id,
         },
     )
     .await
     .unwrap();
 
     assert_eq!(
-        db::accounts::balance(&pool, checking.id, user_id).await.unwrap(),
+        db::accounts::balance(&pool, checking.id).await.unwrap(),
         97_000,
         "income - expense"
     );
@@ -160,35 +113,34 @@ async fn full_flow() {
             value: 5_000,
             description: "Move to savings".into(),
             date: dt("2024-01-07T12:00:00"),
-            user_id,
         },
     )
     .await
     .unwrap();
     assert_ne!(transfer.id, income_tx.id, "transfer/transaction ids must not collide");
 
-    assert_eq!(db::accounts::balance(&pool, checking.id, user_id).await.unwrap(), 92_000);
-    assert_eq!(db::accounts::balance(&pool, savings.id, user_id).await.unwrap(), 5_000);
+    assert_eq!(db::accounts::balance(&pool, checking.id).await.unwrap(), 92_000);
+    assert_eq!(db::accounts::balance(&pool, savings.id).await.unwrap(), 5_000);
 
     // Merged account view: 2 transactions + 1 outgoing transfer, all with distinct ids.
     let mut list = Vec::new();
-    for row in db::transactions::get_all_of_account_joined(&pool, checking.id, user_id)
+    for row in db::transactions::get_all_of_account_joined(&pool, checking.id)
         .await
         .unwrap()
     {
         list.push(service::tx_join_to_dto(row));
     }
-    for row in db::transfers::get_from_account_joined(&pool, checking.id, user_id)
+    for row in db::transfers::get_from_account_joined(&pool, checking.id)
         .await
         .unwrap()
     {
-        list.push(service::transfer_from_to_dto(row, user_id));
+        list.push(service::transfer_from_to_dto(row));
     }
-    for row in db::transfers::get_to_account_joined(&pool, checking.id, user_id)
+    for row in db::transfers::get_to_account_joined(&pool, checking.id)
         .await
         .unwrap()
     {
-        list.push(service::transfer_to_to_dto(row, user_id));
+        list.push(service::transfer_to_to_dto(row));
     }
     assert_eq!(list.len(), 3, "2 transactions + 1 transfer");
     let mut ids: Vec<i32> = list.iter().map(|t| t.id).collect();
@@ -214,7 +166,7 @@ async fn full_flow() {
         current_repeat_count: None,
         next_date: None,
     };
-    let new = build_new_scheduled(&pool, user_id, &body)
+    let new = build_new_scheduled(&pool, &body)
         .await
         .unwrap()
         .expect("valid schedule");
@@ -232,49 +184,38 @@ async fn full_flow() {
         origin_account_id: None,
         destination_account_id: None,
     };
-    pay_scheduled_impl(&pool, user_id, inserted.id, &pay).await.unwrap();
+    pay_scheduled_impl(&pool, inserted.id, &pay).await.unwrap();
 
     assert!(
         matches!(
-            db::scheduled_transactions::get(&pool, inserted.id, user_id).await,
+            db::scheduled_transactions::get(&pool, inserted.id).await,
             Err(AppError::NotFound)
         ),
         "paid one-off schedule is removed"
     );
     assert_eq!(
-        db::accounts::balance(&pool, checking.id, user_id).await.unwrap(),
+        db::accounts::balance(&pool, checking.id).await.unwrap(),
         90_000,
         "balance after pay"
     );
 
     // ----- foreign-key cascade ----------------------------------------------------------
-    db::accounts::delete(&pool, savings.id, user_id).await.unwrap();
+    db::accounts::delete(&pool, savings.id).await.unwrap();
     assert!(
         matches!(
-            db::accounts::get(&pool, savings.id, user_id).await,
+            db::accounts::get(&pool, savings.id).await,
             Err(AppError::NotFound)
         ),
         "deleted account is gone"
-    );
-
-    // ----- logout (session deletion) ----------------------------------------------------
-    db::sessions::delete(&pool, &token).await.unwrap();
-    assert!(
-        matches!(
-            db::sessions::resolve(&pool, &token).await,
-            Err(AppError::Unauthorized)
-        ),
-        "a logged-out token no longer resolves"
     );
 }
 
 /// The IPC error contract: every `AppError` a command can return must serialize to
 /// `{ "status": <code>, "message": <text> }` — the shape Tauri sends across the boundary and
-/// that the React code inspects via `err.response.status` (401 -> logout, 409 -> user exists).
+/// that the React code inspects via `err.response.status` (e.g. 409 -> already exists).
 #[test]
 fn app_error_serializes_to_status_and_message() {
     let cases = [
-        (AppError::Unauthorized, 401, "unauthorized"),
         (AppError::NotFound, 404, "not found"),
         (AppError::Conflict, 409, "conflict"),
         (AppError::BadRequest, 400, "bad request"),
@@ -298,9 +239,8 @@ fn app_error_serializes_to_status_and_message() {
 #[tokio::test]
 async fn paying_a_repeating_schedule_advances_then_finishes() {
     let pool = fresh_pool().await;
-    let user_id = db::users::insert(&pool, "rep", "pw", 4).await.unwrap().id;
-    let wallet = db::accounts::insert(&pool, "Wallet", user_id).await.unwrap();
-    let bills = db::categories::insert(&pool, CategoryTypes::Expense, "Bills", user_id)
+    let wallet = db::accounts::insert(&pool, "Wallet").await.unwrap();
+    let bills = db::categories::insert(&pool, CategoryTypes::Expense, "Bills")
         .await
         .unwrap();
 
@@ -322,7 +262,7 @@ async fn paying_a_repeating_schedule_advances_then_finishes() {
         current_repeat_count: None,
         next_date: None,
     };
-    let new = build_new_scheduled(&pool, user_id, &body)
+    let new = build_new_scheduled(&pool, &body)
         .await
         .unwrap()
         .expect("valid repeating schedule");
@@ -340,9 +280,7 @@ async fn paying_a_repeating_schedule_advances_then_finishes() {
     };
 
     // First payment: schedule survives, count -> 1, next date advances one month.
-    let advanced = pay_scheduled_impl(&pool, user_id, inserted.id, &pay)
-        .await
-        .unwrap();
+    let advanced = pay_scheduled_impl(&pool, inserted.id, &pay).await.unwrap();
     assert_eq!(advanced.current_repeat_count, Some(1), "repeat count advanced");
     assert_eq!(
         advanced.next_date,
@@ -350,24 +288,24 @@ async fn paying_a_repeating_schedule_advances_then_finishes() {
         "next occurrence is one month on"
     );
     assert_eq!(
-        db::accounts::balance(&pool, wallet.id, user_id).await.unwrap(),
+        db::accounts::balance(&pool, wallet.id).await.unwrap(),
         -1_000,
         "the paid occurrence recorded a 1000 expense"
     );
 
     // Second and third payments; the third reaches end_after_repeats and removes the schedule.
-    pay_scheduled_impl(&pool, user_id, inserted.id, &pay).await.unwrap();
-    pay_scheduled_impl(&pool, user_id, inserted.id, &pay).await.unwrap();
+    pay_scheduled_impl(&pool, inserted.id, &pay).await.unwrap();
+    pay_scheduled_impl(&pool, inserted.id, &pay).await.unwrap();
 
     assert!(
         matches!(
-            db::scheduled_transactions::get(&pool, inserted.id, user_id).await,
+            db::scheduled_transactions::get(&pool, inserted.id).await,
             Err(AppError::NotFound)
         ),
         "the schedule is removed after its final occurrence"
     );
     assert_eq!(
-        db::accounts::balance(&pool, wallet.id, user_id).await.unwrap(),
+        db::accounts::balance(&pool, wallet.id).await.unwrap(),
         -3_000,
         "three occurrences recorded three expenses"
     );
@@ -378,12 +316,11 @@ async fn paying_a_repeating_schedule_advances_then_finishes() {
 #[tokio::test]
 async fn paying_a_transfer_schedule_moves_money_and_removes_it() {
     let pool = fresh_pool().await;
-    let user_id = db::users::insert(&pool, "tr", "pw", 4).await.unwrap().id;
-    let a = db::accounts::insert(&pool, "A", user_id).await.unwrap();
-    let b = db::accounts::insert(&pool, "B", user_id).await.unwrap();
+    let a = db::accounts::insert(&pool, "A").await.unwrap();
+    let b = db::accounts::insert(&pool, "B").await.unwrap();
 
     // Seed account A with a 10000 income so the transfer has funds to move.
-    let seed = db::categories::insert(&pool, CategoryTypes::Income, "Seed", user_id)
+    let seed = db::categories::insert(&pool, CategoryTypes::Income, "Seed")
         .await
         .unwrap();
     db::transactions::insert(
@@ -394,7 +331,6 @@ async fn paying_a_transfer_schedule_moves_money_and_removes_it() {
             date: dt("2024-01-01T00:00:00"),
             account: a.id,
             category: seed.id,
-            user_id,
         },
     )
     .await
@@ -417,7 +353,7 @@ async fn paying_a_transfer_schedule_moves_money_and_removes_it() {
         current_repeat_count: None,
         next_date: None,
     };
-    let new = build_new_scheduled(&pool, user_id, &body)
+    let new = build_new_scheduled(&pool, &body)
         .await
         .unwrap()
         .expect("valid transfer schedule");
@@ -432,21 +368,21 @@ async fn paying_a_transfer_schedule_moves_money_and_removes_it() {
         origin_account_id: Some(a.id),
         destination_account_id: Some(b.id),
     };
-    pay_scheduled_impl(&pool, user_id, inserted.id, &pay).await.unwrap();
+    pay_scheduled_impl(&pool, inserted.id, &pay).await.unwrap();
 
     assert_eq!(
-        db::accounts::balance(&pool, a.id, user_id).await.unwrap(),
+        db::accounts::balance(&pool, a.id).await.unwrap(),
         6_000,
         "10000 seed - 4000 transferred out"
     );
     assert_eq!(
-        db::accounts::balance(&pool, b.id, user_id).await.unwrap(),
+        db::accounts::balance(&pool, b.id).await.unwrap(),
         4_000,
         "4000 transferred in"
     );
     assert!(
         matches!(
-            db::scheduled_transactions::get(&pool, inserted.id, user_id).await,
+            db::scheduled_transactions::get(&pool, inserted.id).await,
             Err(AppError::NotFound)
         ),
         "the one-off transfer schedule is removed after payment"
@@ -458,9 +394,8 @@ async fn paying_a_transfer_schedule_moves_money_and_removes_it() {
 #[tokio::test]
 async fn paying_with_missing_or_unknown_refs_is_rejected() {
     let pool = fresh_pool().await;
-    let user_id = db::users::insert(&pool, "val", "pw", 4).await.unwrap().id;
-    let wallet = db::accounts::insert(&pool, "Wallet", user_id).await.unwrap();
-    let cat = db::categories::insert(&pool, CategoryTypes::Expense, "Misc", user_id)
+    let wallet = db::accounts::insert(&pool, "Wallet").await.unwrap();
+    let cat = db::categories::insert(&pool, CategoryTypes::Expense, "Misc")
         .await
         .unwrap();
 
@@ -481,7 +416,7 @@ async fn paying_with_missing_or_unknown_refs_is_rejected() {
         current_repeat_count: None,
         next_date: None,
     };
-    let new = build_new_scheduled(&pool, user_id, &body).await.unwrap().unwrap();
+    let new = build_new_scheduled(&pool, &body).await.unwrap().unwrap();
     let inserted = db::scheduled_transactions::insert(&pool, &new).await.unwrap();
 
     // Missing account/category on the payment body -> BadRequest.
@@ -496,7 +431,7 @@ async fn paying_with_missing_or_unknown_refs_is_rejected() {
     };
     assert!(
         matches!(
-            pay_scheduled_impl(&pool, user_id, inserted.id, &missing).await,
+            pay_scheduled_impl(&pool, inserted.id, &missing).await,
             Err(AppError::BadRequest)
         ),
         "a transaction payment with no account/category is a bad request"
@@ -514,7 +449,7 @@ async fn paying_with_missing_or_unknown_refs_is_rejected() {
     };
     assert!(
         matches!(
-            pay_scheduled_impl(&pool, user_id, inserted.id, &unknown).await,
+            pay_scheduled_impl(&pool, inserted.id, &unknown).await,
             Err(AppError::NotFound)
         ),
         "an unknown account maps to not found"
@@ -522,12 +457,12 @@ async fn paying_with_missing_or_unknown_refs_is_rejected() {
 
     // The failed attempts wrote nothing and left the schedule intact.
     assert_eq!(
-        db::accounts::balance(&pool, wallet.id, user_id).await.unwrap(),
+        db::accounts::balance(&pool, wallet.id).await.unwrap(),
         0,
         "no transaction was recorded by the rejected payments"
     );
     assert!(
-        db::scheduled_transactions::get(&pool, inserted.id, user_id)
+        db::scheduled_transactions::get(&pool, inserted.id)
             .await
             .is_ok(),
         "the schedule survives rejected payments"

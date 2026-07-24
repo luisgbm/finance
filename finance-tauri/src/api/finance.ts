@@ -21,8 +21,8 @@ export { commands };
 /// command's error as exactly this shape.
 export type CommandError = { status: number; message: string };
 
-/// An axios-like error. Components inspect `err.response.status` (401 -> login screen, 409 ->
-/// "user already exists", etc.), so failures are re-thrown in this shape.
+/// An axios-like error. Components inspect `err.response.status` (e.g. 409 -> "already
+/// exists"), so failures are re-thrown in this shape.
 export interface ApiError extends Error {
     response: { status: number; data: { error: string } };
 }
@@ -33,34 +33,13 @@ function apiError(status: number, message: string): ApiError {
     return err;
 }
 
-/// Drop the persisted session token (the full logout, including notifying the backend, lives in
-/// `authentication.service`). Exported so the 401 path below and the auth service share it.
-export function clearSession(): void {
-    localStorage.removeItem('token');
-}
-
-/// Return the opaque session token minted at login/register, or throw a 401 when it is absent —
-/// mirroring the old `callAuthed`, which logged out and rejected when no token was stored.
-export function requireToken(): string {
-    const token = localStorage.getItem('token');
-    if (token == null) {
-        clearSession();
-        throw apiError(401, 'unauthorized');
-    }
-    return token;
-}
-
 /// Translate a resolved tauri-specta `Result` into the axios-shaped contract: `{ data }` on
-/// success; on error throw an axios-like error and, for a 401, clear the now-invalid session so
-/// the app falls back to the login screen (exactly what the old axios interceptor did).
+/// success; on error throw an axios-like error (exactly what the old axios interceptor did).
 function unwrap<T>(result: Result<T, CommandError>): { data: T } {
     if (result.status === 'ok') {
         return { data: result.data };
     }
     const { status, message } = result.error;
-    if (status === 401) {
-        clearSession();
-    }
     throw apiError(status, message);
 }
 

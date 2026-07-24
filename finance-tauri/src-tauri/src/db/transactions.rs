@@ -4,7 +4,7 @@ use sqlx::{SqliteConnection, SqlitePool};
 use crate::error::AppError;
 use crate::models::{CategoryTypes, NewTransactionData, Transaction};
 
-const COLUMNS: &str = "id, value, description, date, account, category, user_id";
+const COLUMNS: &str = "id, value, description, date, account, category";
 
 /// A transaction joined with its category and account, used to build the
 /// `TransactionTransferJoined` response.
@@ -19,12 +19,11 @@ pub struct TxJoinRow {
     pub category_name: String,
     pub account_id: i32,
     pub account_name: String,
-    pub user_id: i32,
 }
 
 const JOIN_SELECT: &str = "SELECT t.id, t.value, t.description, t.date, \
     t.category AS category_id, c.categorytype AS category_type, c.name AS category_name, \
-    t.account AS account_id, a.name AS account_name, t.user_id \
+    t.account AS account_id, a.name AS account_name \
     FROM transactions t \
     JOIN categories c ON c.id = t.category \
     JOIN accounts a ON a.id = t.account";
@@ -53,8 +52,8 @@ pub async fn insert_on(
         .await?;
 
     let transaction = sqlx::query_as::<_, Transaction>(&format!(
-        "INSERT INTO transactions (id, value, description, date, account, category, user_id) \
-         VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING {COLUMNS}"
+        "INSERT INTO transactions (id, value, description, date, account, category) \
+         VALUES (?, ?, ?, ?, ?, ?) RETURNING {COLUMNS}"
     ))
     .bind(id)
     .bind(new.value)
@@ -62,7 +61,6 @@ pub async fn insert_on(
     .bind(new.date)
     .bind(new.account)
     .bind(new.category)
-    .bind(new.user_id)
     .fetch_one(&mut *conn)
     .await?;
 
@@ -72,12 +70,10 @@ pub async fn insert_on(
 pub async fn get_all_of_account_joined(
     pool: &SqlitePool,
     account_id: i32,
-    user_id: i32,
 ) -> Result<Vec<TxJoinRow>, AppError> {
     let rows = sqlx::query_as::<_, TxJoinRow>(&format!(
-        "{JOIN_SELECT} WHERE t.user_id = ? AND t.account = ? ORDER BY t.date DESC"
+        "{JOIN_SELECT} WHERE t.account = ? ORDER BY t.date DESC"
     ))
-    .bind(user_id)
     .bind(account_id)
     .fetch_all(pool)
     .await?;
@@ -85,14 +81,11 @@ pub async fn get_all_of_account_joined(
     Ok(rows)
 }
 
-pub async fn get_joined(pool: &SqlitePool, id: i32, user_id: i32) -> Result<TxJoinRow, AppError> {
-    let row = sqlx::query_as::<_, TxJoinRow>(&format!(
-        "{JOIN_SELECT} WHERE t.user_id = ? AND t.id = ?"
-    ))
-    .bind(user_id)
-    .bind(id)
-    .fetch_one(pool)
-    .await?;
+pub async fn get_joined(pool: &SqlitePool, id: i32) -> Result<TxJoinRow, AppError> {
+    let row = sqlx::query_as::<_, TxJoinRow>(&format!("{JOIN_SELECT} WHERE t.id = ?"))
+        .bind(id)
+        .fetch_one(pool)
+        .await?;
 
     Ok(row)
 }
@@ -101,18 +94,16 @@ pub async fn update(
     pool: &SqlitePool,
     id: i32,
     new: &NewTransactionData,
-    user_id: i32,
 ) -> Result<Transaction, AppError> {
     let transaction = sqlx::query_as::<_, Transaction>(&format!(
         "UPDATE transactions SET value = ?, description = ?, date = ?, account = ?, category = ? \
-         WHERE user_id = ? AND id = ? RETURNING {COLUMNS}"
+         WHERE id = ? RETURNING {COLUMNS}"
     ))
     .bind(new.value)
     .bind(new.description.as_str())
     .bind(new.date)
     .bind(new.account)
     .bind(new.category)
-    .bind(user_id)
     .bind(id)
     .fetch_one(pool)
     .await?;
@@ -120,11 +111,10 @@ pub async fn update(
     Ok(transaction)
 }
 
-pub async fn delete(pool: &SqlitePool, id: i32, user_id: i32) -> Result<Transaction, AppError> {
+pub async fn delete(pool: &SqlitePool, id: i32) -> Result<Transaction, AppError> {
     let transaction = sqlx::query_as::<_, Transaction>(&format!(
-        "DELETE FROM transactions WHERE user_id = ? AND id = ? RETURNING {COLUMNS}"
+        "DELETE FROM transactions WHERE id = ? RETURNING {COLUMNS}"
     ))
-    .bind(user_id)
     .bind(id)
     .fetch_one(pool)
     .await?;

@@ -5,97 +5,69 @@
 
 
 export const commands = {
-async register(req: NewAppUser) : Promise<Result<InitialData, { status: number; message: string }>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("register", { req }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async login(req: NewAppUser) : Promise<Result<InitialData, { status: number; message: string }>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("login", { req }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
 /**
- * Invalidate a session (logout). Best-effort: deleting an unknown token is a no-op.
+ * Fetch the full initial payload (accounts, categories, scheduled transactions). Called once
+ * on app start to populate the frontend store.
  */
-async logout(token: string) : Promise<Result<null, { status: number; message: string }>> {
+async getInitialData() : Promise<Result<InitialData, { status: number; message: string }>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("logout", { token }) };
+    return { status: "ok", data: await TAURI_INVOKE("get_initial_data") };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
 },
-/**
- * Re-fetch the full initial payload for the session's user (the former `GET /token`). Used on
- * app start to restore the session persisted in `localStorage`; a stale/unknown token yields
- * 401 and the frontend returns to the login screen.
- */
-async getInitialData(token: string) : Promise<Result<InitialData, { status: number; message: string }>> {
+async createAccount(name: string) : Promise<Result<GetAccount, { status: number; message: string }>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("get_initial_data", { token }) };
+    return { status: "ok", data: await TAURI_INVOKE("create_account", { name }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
 },
-async createAccount(token: string, name: string) : Promise<Result<GetAccount, { status: number; message: string }>> {
+async getAccounts() : Promise<Result<GetAccount[], { status: number; message: string }>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("create_account", { token, name }) };
+    return { status: "ok", data: await TAURI_INVOKE("get_accounts") };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
 },
-async getAccounts(token: string) : Promise<Result<GetAccount[], { status: number; message: string }>> {
+async getAccount(accountId: number) : Promise<Result<GetAccount, { status: number; message: string }>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("get_accounts", { token }) };
+    return { status: "ok", data: await TAURI_INVOKE("get_account", { accountId }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
 },
-async getAccount(token: string, accountId: number) : Promise<Result<GetAccount, { status: number; message: string }>> {
+async updateAccount(accountId: number, name: string) : Promise<Result<GetAccount, { status: number; message: string }>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("get_account", { token, accountId }) };
+    return { status: "ok", data: await TAURI_INVOKE("update_account", { accountId, name }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
 },
-async updateAccount(token: string, accountId: number, name: string) : Promise<Result<GetAccount, { status: number; message: string }>> {
+async deleteAccount(accountId: number) : Promise<Result<Account, { status: number; message: string }>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("update_account", { token, accountId, name }) };
+    return { status: "ok", data: await TAURI_INVOKE("delete_account", { accountId }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
 },
-async deleteAccount(token: string, accountId: number) : Promise<Result<Account, { status: number; message: string }>> {
+async createCategory(req: PostCategory) : Promise<Result<Category, { status: number; message: string }>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("delete_account", { token, accountId }) };
+    return { status: "ok", data: await TAURI_INVOKE("create_category", { req }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
 },
-async createCategory(token: string, req: PostCategory) : Promise<Result<Category, { status: number; message: string }>> {
+async getCategories() : Promise<Result<Category[], { status: number; message: string }>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("create_category", { token, req }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async getCategories(token: string) : Promise<Result<Category[], { status: number; message: string }>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("get_categories", { token }) };
+    return { status: "ok", data: await TAURI_INVOKE("get_categories") };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -105,153 +77,153 @@ async getCategories(token: string) : Promise<Result<Category[], { status: number
  * Filter categories by type. Replaces the former `/categories/expense` and
  * `/categories/income` routes; the type is matched case-insensitively.
  */
-async getCategoriesByType(token: string, categoryType: string) : Promise<Result<Category[], { status: number; message: string }>> {
+async getCategoriesByType(categoryType: string) : Promise<Result<Category[], { status: number; message: string }>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("get_categories_by_type", { token, categoryType }) };
+    return { status: "ok", data: await TAURI_INVOKE("get_categories_by_type", { categoryType }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
 },
-async getCategory(token: string, categoryId: number) : Promise<Result<Category, { status: number; message: string }>> {
+async getCategory(categoryId: number) : Promise<Result<Category, { status: number; message: string }>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("get_category", { token, categoryId }) };
+    return { status: "ok", data: await TAURI_INVOKE("get_category", { categoryId }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
 },
-async updateCategory(token: string, categoryId: number, req: PostCategory) : Promise<Result<Category, { status: number; message: string }>> {
+async updateCategory(categoryId: number, req: PostCategory) : Promise<Result<Category, { status: number; message: string }>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("update_category", { token, categoryId, req }) };
+    return { status: "ok", data: await TAURI_INVOKE("update_category", { categoryId, req }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
 },
-async deleteCategory(token: string, categoryId: number) : Promise<Result<Category, { status: number; message: string }>> {
+async deleteCategory(categoryId: number) : Promise<Result<Category, { status: number; message: string }>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("delete_category", { token, categoryId }) };
+    return { status: "ok", data: await TAURI_INVOKE("delete_category", { categoryId }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
 },
-async createTransaction(token: string, accountId: number, req: PostTransaction) : Promise<Result<Transaction, { status: number; message: string }>> {
+async createTransaction(accountId: number, req: PostTransaction) : Promise<Result<Transaction, { status: number; message: string }>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("create_transaction", { token, accountId, req }) };
+    return { status: "ok", data: await TAURI_INVOKE("create_transaction", { accountId, req }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
 },
-async getTransactionsForAccount(token: string, accountId: number) : Promise<Result<TransactionTransferJoined[], { status: number; message: string }>> {
+async getTransactionsForAccount(accountId: number) : Promise<Result<TransactionTransferJoined[], { status: number; message: string }>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("get_transactions_for_account", { token, accountId }) };
+    return { status: "ok", data: await TAURI_INVOKE("get_transactions_for_account", { accountId }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
 },
-async getTransaction(token: string, transactionId: number) : Promise<Result<TransactionTransferJoined, { status: number; message: string }>> {
+async getTransaction(transactionId: number) : Promise<Result<TransactionTransferJoined, { status: number; message: string }>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("get_transaction", { token, transactionId }) };
+    return { status: "ok", data: await TAURI_INVOKE("get_transaction", { transactionId }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
 },
-async updateTransaction(token: string, transactionId: number, req: PatchTransaction) : Promise<Result<Transaction, { status: number; message: string }>> {
+async updateTransaction(transactionId: number, req: PatchTransaction) : Promise<Result<Transaction, { status: number; message: string }>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("update_transaction", { token, transactionId, req }) };
+    return { status: "ok", data: await TAURI_INVOKE("update_transaction", { transactionId, req }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
 },
-async deleteTransaction(token: string, transactionId: number) : Promise<Result<Transaction, { status: number; message: string }>> {
+async deleteTransaction(transactionId: number) : Promise<Result<Transaction, { status: number; message: string }>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("delete_transaction", { token, transactionId }) };
+    return { status: "ok", data: await TAURI_INVOKE("delete_transaction", { transactionId }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
 },
-async createTransfer(token: string, originAccount: number, destinationAccount: number, req: PostTransfer) : Promise<Result<Transfer, { status: number; message: string }>> {
+async createTransfer(originAccount: number, destinationAccount: number, req: PostTransfer) : Promise<Result<Transfer, { status: number; message: string }>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("create_transfer", { token, originAccount, destinationAccount, req }) };
+    return { status: "ok", data: await TAURI_INVOKE("create_transfer", { originAccount, destinationAccount, req }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
 },
-async getTransfer(token: string, transferId: number) : Promise<Result<Transfer, { status: number; message: string }>> {
+async getTransfer(transferId: number) : Promise<Result<Transfer, { status: number; message: string }>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("get_transfer", { token, transferId }) };
+    return { status: "ok", data: await TAURI_INVOKE("get_transfer", { transferId }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
 },
-async updateTransfer(token: string, transferId: number, req: PatchTransfer) : Promise<Result<Transfer, { status: number; message: string }>> {
+async updateTransfer(transferId: number, req: PatchTransfer) : Promise<Result<Transfer, { status: number; message: string }>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("update_transfer", { token, transferId, req }) };
+    return { status: "ok", data: await TAURI_INVOKE("update_transfer", { transferId, req }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
 },
-async deleteTransfer(token: string, transferId: number) : Promise<Result<Transfer, { status: number; message: string }>> {
+async deleteTransfer(transferId: number) : Promise<Result<Transfer, { status: number; message: string }>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("delete_transfer", { token, transferId }) };
+    return { status: "ok", data: await TAURI_INVOKE("delete_transfer", { transferId }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
 },
-async createScheduledTransaction(token: string, req: PostScheduledTransaction) : Promise<Result<GetScheduledTransaction, { status: number; message: string }>> {
+async createScheduledTransaction(req: PostScheduledTransaction) : Promise<Result<GetScheduledTransaction, { status: number; message: string }>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("create_scheduled_transaction", { token, req }) };
+    return { status: "ok", data: await TAURI_INVOKE("create_scheduled_transaction", { req }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
 },
-async getScheduledTransactions(token: string) : Promise<Result<GetScheduledTransaction[], { status: number; message: string }>> {
+async getScheduledTransactions() : Promise<Result<GetScheduledTransaction[], { status: number; message: string }>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("get_scheduled_transactions", { token }) };
+    return { status: "ok", data: await TAURI_INVOKE("get_scheduled_transactions") };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
 },
-async getScheduledTransaction(token: string, scheduledTransactionId: number) : Promise<Result<GetScheduledTransaction, { status: number; message: string }>> {
+async getScheduledTransaction(scheduledTransactionId: number) : Promise<Result<GetScheduledTransaction, { status: number; message: string }>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("get_scheduled_transaction", { token, scheduledTransactionId }) };
+    return { status: "ok", data: await TAURI_INVOKE("get_scheduled_transaction", { scheduledTransactionId }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
 },
-async updateScheduledTransaction(token: string, scheduledTransactionId: number, req: PostScheduledTransaction) : Promise<Result<GetScheduledTransaction, { status: number; message: string }>> {
+async updateScheduledTransaction(scheduledTransactionId: number, req: PostScheduledTransaction) : Promise<Result<GetScheduledTransaction, { status: number; message: string }>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("update_scheduled_transaction", { token, scheduledTransactionId, req }) };
+    return { status: "ok", data: await TAURI_INVOKE("update_scheduled_transaction", { scheduledTransactionId, req }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
 },
-async deleteScheduledTransaction(token: string, scheduledTransactionId: number) : Promise<Result<ScheduledTransaction, { status: number; message: string }>> {
+async deleteScheduledTransaction(scheduledTransactionId: number) : Promise<Result<ScheduledTransaction, { status: number; message: string }>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("delete_scheduled_transaction", { token, scheduledTransactionId }) };
+    return { status: "ok", data: await TAURI_INVOKE("delete_scheduled_transaction", { scheduledTransactionId }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
 },
-async payScheduledTransaction(token: string, scheduledTransactionId: number, req: PostScheduledTransactionPay) : Promise<Result<ScheduledTransaction, { status: number; message: string }>> {
+async payScheduledTransaction(scheduledTransactionId: number, req: PostScheduledTransactionPay) : Promise<Result<ScheduledTransaction, { status: number; message: string }>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("pay_scheduled_transaction", { token, scheduledTransactionId, req }) };
+    return { status: "ok", data: await TAURI_INVOKE("pay_scheduled_transaction", { scheduledTransactionId, req }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -269,13 +241,12 @@ async payScheduledTransaction(token: string, scheduledTransactionId: number, req
 
 /** user-defined types **/
 
-export type Account = { id: number; name: string; user_id: number }
-export type Category = { id: number; categorytype: CategoryTypes; name: string; user_id: number }
+export type Account = { id: number; name: string }
+export type Category = { id: number; categorytype: CategoryTypes; name: string }
 export type CategoryTypes = "Expense" | "Income" | "TransferIncome" | "TransferExpense"
-export type GetAccount = { id: number; name: string; balance: number; user_id: number }
-export type GetScheduledTransaction = { id: number; kind: ScheduledTransactionKinds; value: number; description: string | null; created_date: string; account_id: number | null; account_name: string | null; category_id: number | null; category_type: CategoryTypes | null; category_name: string | null; origin_account_id: number | null; origin_account_name: string | null; destination_account_id: number | null; destination_account_name: string | null; repeat: boolean; repeat_freq: RepeatFrequencies | null; repeat_interval: number | null; infinite_repeat: boolean | null; end_after_repeats: number | null; current_repeat_count: number | null; next_date: string | null; user_id: number }
-export type InitialData = { token: string; accounts: GetAccount[]; categories: Category[]; scheduled_transactions: GetScheduledTransaction[] }
-export type NewAppUser = { name: string; password: string }
+export type GetAccount = { id: number; name: string; balance: number }
+export type GetScheduledTransaction = { id: number; kind: ScheduledTransactionKinds; value: number; description: string | null; created_date: string; account_id: number | null; account_name: string | null; category_id: number | null; category_type: CategoryTypes | null; category_name: string | null; origin_account_id: number | null; origin_account_name: string | null; destination_account_id: number | null; destination_account_name: string | null; repeat: boolean; repeat_freq: RepeatFrequencies | null; repeat_interval: number | null; infinite_repeat: boolean | null; end_after_repeats: number | null; current_repeat_count: number | null; next_date: string | null }
+export type InitialData = { accounts: GetAccount[]; categories: Category[]; scheduled_transactions: GetScheduledTransaction[] }
 export type PatchTransaction = { value: number; description: string; date: string; account: number; category: number }
 export type PatchTransfer = { origin_account: number; destination_account: number; value: number; description: string; date: string }
 export type PostCategory = { categorytype: CategoryTypes; name: string }
@@ -284,11 +255,11 @@ export type PostScheduledTransactionPay = { value: number; description: string; 
 export type PostTransaction = { value: number; description: string; date: string; category: number }
 export type PostTransfer = { value: number; description: string; date: string }
 export type RepeatFrequencies = "Days" | "Weeks" | "Months" | "Years"
-export type ScheduledTransaction = { id: number; kind: ScheduledTransactionKinds; value: number; description: string | null; created_date: string; account_id: number | null; category_id: number | null; origin_account_id: number | null; destination_account_id: number | null; repeat: boolean; repeat_freq: RepeatFrequencies | null; repeat_interval: number | null; infinite_repeat: boolean | null; end_after_repeats: number | null; current_repeat_count: number | null; next_date: string | null; user_id: number }
+export type ScheduledTransaction = { id: number; kind: ScheduledTransactionKinds; value: number; description: string | null; created_date: string; account_id: number | null; category_id: number | null; origin_account_id: number | null; destination_account_id: number | null; repeat: boolean; repeat_freq: RepeatFrequencies | null; repeat_interval: number | null; infinite_repeat: boolean | null; end_after_repeats: number | null; current_repeat_count: number | null; next_date: string | null }
 export type ScheduledTransactionKinds = "Transaction" | "Transfer"
-export type Transaction = { id: number; value: number; description: string; date: string; account: number; category: number; user_id: number }
-export type TransactionTransferJoined = { id: number; value: number; description: string; date: string; category_id: number | null; category_type: CategoryTypes; category_name: string | null; account_id: number; account_name: string; user_id: number; from_account_id: number | null; from_account_name: string | null }
-export type Transfer = { id: number; origin_account: number; destination_account: number; value: number; description: string; date: string; user_id: number }
+export type Transaction = { id: number; value: number; description: string; date: string; account: number; category: number }
+export type TransactionTransferJoined = { id: number; value: number; description: string; date: string; category_id: number | null; category_type: CategoryTypes; category_name: string | null; account_id: number; account_name: string; from_account_id: number | null; from_account_name: string | null }
+export type Transfer = { id: number; origin_account: number; destination_account: number; value: number; description: string; date: string }
 
 /** tauri-specta globals **/
 

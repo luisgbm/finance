@@ -4,8 +4,7 @@ use sqlx::{SqliteConnection, SqlitePool};
 use crate::error::AppError;
 use crate::models::{NewTransferData, Transfer};
 
-const COLUMNS: &str =
-    "id, origin_account, destination_account, value, description, date, user_id";
+const COLUMNS: &str = "id, origin_account, destination_account, value, description, date";
 
 /// A transfer leaving an account (origin = the account being viewed), joined with the
 /// origin account name.
@@ -52,8 +51,8 @@ pub async fn insert_on(
         .await?;
 
     let transfer = sqlx::query_as::<_, Transfer>(&format!(
-        "INSERT INTO transfers (id, origin_account, destination_account, value, description, date, user_id) \
-         VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING {COLUMNS}"
+        "INSERT INTO transfers (id, origin_account, destination_account, value, description, date) \
+         VALUES (?, ?, ?, ?, ?, ?) RETURNING {COLUMNS}"
     ))
     .bind(id)
     .bind(new.origin_account)
@@ -61,18 +60,16 @@ pub async fn insert_on(
     .bind(new.value)
     .bind(new.description.as_str())
     .bind(new.date)
-    .bind(new.user_id)
     .fetch_one(&mut *conn)
     .await?;
 
     Ok(transfer)
 }
 
-pub async fn get(pool: &SqlitePool, id: i32, user_id: i32) -> Result<Transfer, AppError> {
+pub async fn get(pool: &SqlitePool, id: i32) -> Result<Transfer, AppError> {
     let transfer = sqlx::query_as::<_, Transfer>(&format!(
-        "SELECT {COLUMNS} FROM transfers WHERE user_id = ? AND id = ?"
+        "SELECT {COLUMNS} FROM transfers WHERE id = ?"
     ))
-    .bind(user_id)
     .bind(id)
     .fetch_one(pool)
     .await?;
@@ -83,14 +80,12 @@ pub async fn get(pool: &SqlitePool, id: i32, user_id: i32) -> Result<Transfer, A
 pub async fn get_from_account_joined(
     pool: &SqlitePool,
     account_id: i32,
-    user_id: i32,
 ) -> Result<Vec<TransferFromRow>, AppError> {
     let rows = sqlx::query_as::<_, TransferFromRow>(
         "SELECT tr.id, tr.value, tr.description, tr.date, tr.origin_account, o.name AS origin_name \
          FROM transfers tr JOIN accounts o ON o.id = tr.origin_account \
-         WHERE tr.user_id = ? AND tr.origin_account = ?",
+         WHERE tr.origin_account = ?",
     )
-    .bind(user_id)
     .bind(account_id)
     .fetch_all(pool)
     .await?;
@@ -101,7 +96,6 @@ pub async fn get_from_account_joined(
 pub async fn get_to_account_joined(
     pool: &SqlitePool,
     account_id: i32,
-    user_id: i32,
 ) -> Result<Vec<TransferToRow>, AppError> {
     let rows = sqlx::query_as::<_, TransferToRow>(
         "SELECT tr.id, tr.value, tr.description, tr.date, \
@@ -110,9 +104,8 @@ pub async fn get_to_account_joined(
          FROM transfers tr \
          JOIN accounts o ON o.id = tr.origin_account \
          JOIN accounts d ON d.id = tr.destination_account \
-         WHERE tr.user_id = ? AND tr.destination_account = ?",
+         WHERE tr.destination_account = ?",
     )
-    .bind(user_id)
     .bind(account_id)
     .fetch_all(pool)
     .await?;
@@ -124,19 +117,17 @@ pub async fn update(
     pool: &SqlitePool,
     id: i32,
     new: &NewTransferData,
-    user_id: i32,
 ) -> Result<Transfer, AppError> {
     let transfer = sqlx::query_as::<_, Transfer>(&format!(
         "UPDATE transfers SET origin_account = ?, destination_account = ?, value = ?, \
             description = ?, date = ? \
-         WHERE user_id = ? AND id = ? RETURNING {COLUMNS}"
+         WHERE id = ? RETURNING {COLUMNS}"
     ))
     .bind(new.origin_account)
     .bind(new.destination_account)
     .bind(new.value)
     .bind(new.description.as_str())
     .bind(new.date)
-    .bind(user_id)
     .bind(id)
     .fetch_one(pool)
     .await?;
@@ -144,11 +135,10 @@ pub async fn update(
     Ok(transfer)
 }
 
-pub async fn delete(pool: &SqlitePool, id: i32, user_id: i32) -> Result<Transfer, AppError> {
+pub async fn delete(pool: &SqlitePool, id: i32) -> Result<Transfer, AppError> {
     let transfer = sqlx::query_as::<_, Transfer>(&format!(
-        "DELETE FROM transfers WHERE user_id = ? AND id = ? RETURNING {COLUMNS}"
+        "DELETE FROM transfers WHERE id = ? RETURNING {COLUMNS}"
     ))
-    .bind(user_id)
     .bind(id)
     .fetch_one(pool)
     .await?;

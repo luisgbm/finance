@@ -11,53 +11,38 @@ use crate::models::{
     ScheduledTransaction, ScheduledTransactionKinds, TransactionTransferJoined,
 };
 
-/// Load all of a user's accounts, each with its computed balance.
-pub async fn accounts_with_balance(
-    pool: &SqlitePool,
-    user_id: i32,
-) -> Result<Vec<GetAccount>, AppError> {
-    let accounts = db::accounts::get_all(pool, user_id).await?;
+/// Load all accounts, each with its computed balance.
+pub async fn accounts_with_balance(pool: &SqlitePool) -> Result<Vec<GetAccount>, AppError> {
+    let accounts = db::accounts::get_all(pool).await?;
     let mut result = Vec::with_capacity(accounts.len());
 
     for account in &accounts {
-        let balance = db::accounts::balance(pool, account.id, user_id).await?;
+        let balance = db::accounts::balance(pool, account.id).await?;
         result.push(GetAccount {
             id: account.id,
             name: account.name.clone(),
             balance,
-            user_id,
         });
     }
 
     Ok(result)
 }
 
-/// Build the `InitialData` payload returned by login / register / initial-data fetch.
-///
-/// The `token` is the opaque session token minted at login (see `db::sessions`); the frontend
-/// persists it and sends it back on every authenticated command. It is passed in rather than
-/// derived here because only the auth commands know whether they just created a new session or
-/// are echoing an existing one.
-pub async fn build_initial_data(
-    pool: &SqlitePool,
-    user_id: i32,
-    token: String,
-) -> Result<InitialData, AppError> {
+/// Build the `InitialData` payload returned by the initial-data fetch on app start.
+pub async fn build_initial_data(pool: &SqlitePool) -> Result<InitialData, AppError> {
     Ok(InitialData {
-        token,
-        accounts: accounts_with_balance(pool, user_id).await?,
-        categories: db::categories::get_all(pool, user_id).await?,
-        scheduled_transactions: all_scheduled_enriched(pool, user_id).await?,
+        accounts: accounts_with_balance(pool).await?,
+        categories: db::categories::get_all(pool).await?,
+        scheduled_transactions: all_scheduled_enriched(pool).await?,
     })
 }
 
-/// Load all of a user's scheduled transactions, enriched with account/category names,
-/// ordered by `created_date` descending (the order comes from the database query).
+/// Load all scheduled transactions, enriched with account/category names, ordered by
+/// `created_date` descending (the order comes from the database query).
 pub async fn all_scheduled_enriched(
     pool: &SqlitePool,
-    user_id: i32,
 ) -> Result<Vec<GetScheduledTransaction>, AppError> {
-    let scheduled = db::scheduled_transactions::get_all(pool, user_id).await?;
+    let scheduled = db::scheduled_transactions::get_all(pool).await?;
     let mut result = Vec::with_capacity(scheduled.len());
 
     for st in &scheduled {
@@ -96,7 +81,6 @@ pub async fn enrich_scheduled(
         end_after_repeats: st.end_after_repeats,
         current_repeat_count: st.current_repeat_count,
         next_date: st.next_date,
-        user_id: st.user_id,
     };
 
     let missing = || AppError::Internal("scheduled transaction has an unresolved reference".into());
@@ -106,10 +90,10 @@ pub async fn enrich_scheduled(
             let account_id = st.account_id.ok_or_else(missing)?;
             let category_id = st.category_id.ok_or_else(missing)?;
 
-            let account = db::accounts::get(pool, account_id, st.user_id)
+            let account = db::accounts::get(pool, account_id)
                 .await
                 .map_err(|_| missing())?;
-            let category = db::categories::get(pool, category_id, st.user_id)
+            let category = db::categories::get(pool, category_id)
                 .await
                 .map_err(|_| missing())?;
 
@@ -123,10 +107,10 @@ pub async fn enrich_scheduled(
             let origin_id = st.origin_account_id.ok_or_else(missing)?;
             let destination_id = st.destination_account_id.ok_or_else(missing)?;
 
-            let origin = db::accounts::get(pool, origin_id, st.user_id)
+            let origin = db::accounts::get(pool, origin_id)
                 .await
                 .map_err(|_| missing())?;
-            let destination = db::accounts::get(pool, destination_id, st.user_id)
+            let destination = db::accounts::get(pool, destination_id)
                 .await
                 .map_err(|_| missing())?;
 
@@ -152,14 +136,13 @@ pub fn tx_join_to_dto(row: TxJoinRow) -> TransactionTransferJoined {
         category_name: Some(row.category_name),
         account_id: row.account_id,
         account_name: row.account_name,
-        user_id: row.user_id,
         from_account_id: None,
         from_account_name: None,
     }
 }
 
 /// Map a transfer leaving the viewed account to a `TransferExpense` pseudo-transaction.
-pub fn transfer_from_to_dto(row: TransferFromRow, user_id: i32) -> TransactionTransferJoined {
+pub fn transfer_from_to_dto(row: TransferFromRow) -> TransactionTransferJoined {
     TransactionTransferJoined {
         id: row.id,
         value: row.value,
@@ -170,14 +153,13 @@ pub fn transfer_from_to_dto(row: TransferFromRow, user_id: i32) -> TransactionTr
         category_name: None,
         account_id: row.origin_account,
         account_name: row.origin_name.clone(),
-        user_id,
         from_account_id: Some(row.origin_account),
         from_account_name: Some(row.origin_name),
     }
 }
 
 /// Map a transfer entering the viewed account to a `TransferIncome` pseudo-transaction.
-pub fn transfer_to_to_dto(row: TransferToRow, user_id: i32) -> TransactionTransferJoined {
+pub fn transfer_to_to_dto(row: TransferToRow) -> TransactionTransferJoined {
     TransactionTransferJoined {
         id: row.id,
         value: row.value,
@@ -188,7 +170,6 @@ pub fn transfer_to_to_dto(row: TransferToRow, user_id: i32) -> TransactionTransf
         category_name: None,
         account_id: row.destination_account,
         account_name: row.dest_name,
-        user_id,
         from_account_id: Some(row.origin_account),
         from_account_name: Some(row.origin_name),
     }

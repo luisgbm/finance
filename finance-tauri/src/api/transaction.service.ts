@@ -1,8 +1,8 @@
-import { commands, call, requireToken } from './finance';
+import { commands, call } from './finance';
 
 const getAllTransactionsForAccountId = async (accountId: number) => {
     try {
-        return await call(commands.getTransactionsForAccount(requireToken(), accountId));
+        return await call(commands.getTransactionsForAccount(accountId));
     } catch (e) {
         console.log(e);
         throw e;
@@ -10,7 +10,7 @@ const getAllTransactionsForAccountId = async (accountId: number) => {
 };
 
 const getTransactionById = async (transactionId: number) => {
-    return await call(commands.getTransaction(requireToken(), transactionId));
+    return await call(commands.getTransaction(transactionId));
 };
 
 const newTransaction = async (
@@ -21,7 +21,7 @@ const newTransaction = async (
     category: number,
 ) => {
     return await call(
-        commands.createTransaction(requireToken(), accountId, { value, description, date, category }),
+        commands.createTransaction(accountId, { value, description, date, category }),
     );
 };
 
@@ -34,7 +34,7 @@ const editTransactionById = async (
     category: number,
 ) => {
     return await call(
-        commands.updateTransaction(requireToken(), transactionId, {
+        commands.updateTransaction(transactionId, {
             value,
             description,
             date,
@@ -45,7 +45,7 @@ const editTransactionById = async (
 };
 
 const deleteTransactionById = async (transactionId: number) => {
-    return await call(commands.deleteTransaction(requireToken(), transactionId));
+    return await call(commands.deleteTransaction(transactionId));
 };
 
 export const transactionService = {

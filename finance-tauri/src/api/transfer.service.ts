@@ -1,4 +1,4 @@
-import { commands, call, requireToken } from './finance';
+import { commands, call } from './finance';
 
 const newTransfer = async (
     value: number,
@@ -7,15 +7,15 @@ const newTransfer = async (
     to: number,
     date: string,
 ) => {
-    return await call(commands.createTransfer(requireToken(), from, to, { value, description, date }));
+    return await call(commands.createTransfer(from, to, { value, description, date }));
 };
 
 const getTransferById = async (transferId: number) => {
-    return await call(commands.getTransfer(requireToken(), transferId));
+    return await call(commands.getTransfer(transferId));
 };
 
 const deleteTransferById = async (transferId: number) => {
-    return await call(commands.deleteTransfer(requireToken(), transferId));
+    return await call(commands.deleteTransfer(transferId));
 };
 
 const editTransferById = async (
@@ -27,7 +27,7 @@ const editTransferById = async (
     to: number,
 ) => {
     return await call(
-        commands.updateTransfer(requireToken(), transferId, {
+        commands.updateTransfer(transferId, {
             origin_account: from,
             destination_account: to,
             value,

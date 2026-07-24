@@ -6,6 +6,10 @@ frontend in a [**Tauri 2**](https://tauri.app) shell, ports the original Axum RE
 logic to **native Tauri IPC commands**, and swaps **PostgreSQL for embedded SQLite**, so the whole
 personal money manager runs offline from one file.
 
+Because it is a personal, on‑device app, this desktop build is **single‑user with no authentication**:
+there is no registration, login, or logout, and no `user_id` anywhere in the schema or IPC. The app
+opens straight to the **accounts screen (Home)**.
+
 > This is an experiment that lives alongside the production monorepo. The
 > [`finance/`](../finance) (Axum + PostgreSQL API) and [`financejs/`](../financejs) (React web app)
 > projects remain the canonical apps; this directory reuses their code almost verbatim. See the
@@ -63,14 +67,17 @@ full model.
 ## What changed vs. the web app
 
 The port was deliberately minimal. The **frontend** is the `financejs` React app reused almost
-verbatim; the components are untouched. The only changes are in the API layer under
+verbatim; the components are essentially untouched. The main changes are in the API layer under
 [`src/api/`](./src/api), now written in **TypeScript** on top of the `tauri-specta`‑generated
 [`bindings.ts`](./src/api/bindings.ts): each resource service calls the fully‑typed
 `commands.<name>(…)` client — command names, arguments and return types are checked against the Rust
 signatures at compile time (`npm run typecheck`) — instead of an axios HTTP method, and
 [`finance.ts`](./src/api/finance.ts) adapts the generated `Result<T, E>` outcomes back to the axios
 shape the app was written against (`{ data }` on success; a thrown `Error` with `err.response.status`
-on failure, so every existing `err.response.status` check keeps working). A Tauri‑tuned
+on failure, so every existing `err.response.status` check keeps working). Because the app is
+single‑user, the **login/registration screens and the Settings logout button were removed**, routing
+now opens directly to the accounts list (`/`), and [`App.jsx`](./src/components/App.jsx) fetches the
+initial data once on startup (there is no login step to assemble it). A Tauri‑tuned
 [`vite.config.js`](./vite.config.js) (`base: './'`, fixed port `1420`, `REACT_APP_` env prefix) rounds
 it out.
 
@@ -80,20 +87,23 @@ The **backend logic** is the original Axum API, ported to SQLite and re‑expose
 |---|---|
 | `PgPool` | `SqlitePool` (bundled SQLite, compiled from source — no external DLL) |
 | `$1, $2 …` placeholders | `?` placeholders |
-| `pgcrypto` (`crypt`/`gen_salt`) password hashing | [`bcrypt`](https://crates.io/crates/bcrypt) crate, in‑process |
 | `CREATE TYPE … ENUM` types | plain `TEXT` columns (snake_case enum names) |
 | shared `transactions_transfers_id_seq` sequence | a `seq_tx_tr` table drawn from inside a transaction |
 | `ON DELETE CASCADE` | same, with `PRAGMA foreign_keys = ON` per connection |
 | balance via one aggregate SQL query | three `query_scalar::<i64>` sums combined in Rust |
 | Axum routes + handlers over HTTP | `#[tauri::command]` functions invoked over IPC (no router, no port) |
-| JWT bearer auth (`jsonwebtoken`) + CORS | opaque **session tokens**: login/register mint a random UUID stored in a `sessions` table (see [`db/sessions.rs`](./src-tauri/src/db/sessions.rs)); the frontend persists it and passes it as the `token` argument, and the backend resolves it to a `user_id` on every call — unguessable, so the WebView can't read another user's data by changing a number |
-| env‑driven config (`DATABASE_URL`, `JWT_SECRET` …) | built‑in local defaults in [`config.rs`](./src-tauri/src/config.rs) (only the bcrypt cost remains) |
+| multi‑user: JWT bearer auth + per‑user `user_id` scoping on every table/query | **single‑user, no auth**: registration/login/logout and the whole `user_id` column were removed from the schema, models, queries, service, commands and tests — the app owns the one local database outright |
+| env‑driven config (`DATABASE_URL`, `JWT_SECRET` …) | none needed — no server, no secrets, no auth cost to configure |
 
-The SQLite schema lives in versioned migrations under
-[`src-tauri/src/migrations/`](./src-tauri/src/migrations) (`0001_initial.sql`, `0002_sessions.sql`) —
-embedded into the binary (`include_str!`) and applied in order on every launch through a
-`PRAGMA user_version` ladder (see [`bootstrap.rs`](./src-tauri/src/bootstrap.rs)), so an existing
-`finance.db` is upgraded in place rather than recreated.
+The SQLite schema lives in a versioned migration under
+[`src-tauri/src/migrations/`](./src-tauri/src/migrations) (`0001_initial.sql`) — embedded into the
+binary (`include_str!`) and applied on launch through a `PRAGMA user_version` ladder (see
+[`bootstrap.rs`](./src-tauri/src/bootstrap.rs)).
+
+> **Schema reset:** because this build removes `user_id` (and the `app_users`/`sessions` tables)
+> outright rather than migrating them away, a `finance.db` created by an **earlier, multi‑user** build
+> of this POC is incompatible. Delete the `com.luisgbm.finance` app‑data folder (or just
+> `finance.db*`) once before running this version; a fresh, empty database is created automatically.
 
 ### Desktop hardening
 
@@ -126,9 +136,9 @@ Beyond the transport swap, the POC adds a few desktop‑app essentials:
 - **Backend (embedded):** native `#[tauri::command]` functions on Tauri's async runtime (Tokio) — no HTTP server
 - **Type‑safe IPC:** [`tauri-specta`](https://github.com/oscartbeaumont/tauri-specta) 2 + [`specta`](https://crates.io/crates/specta) — generate `src/api/bindings.ts` from the Rust command signatures
 - **Database:** [SQLx](https://github.com/launchbadge/sqlx) 0.8 with the **bundled `sqlite`** driver + local `finance.db`, versioned via embedded migrations
-- **Auth:** in‑process [`bcrypt`](https://crates.io/crates/bcrypt) 0.15 password hashing + opaque UUID **session tokens** (no JWT)
+- **Auth:** none — single‑user local app (no login, no `user_id`)
 - **Desktop plugins:** `tauri-plugin-log` (file logging), `tauri-plugin-single-instance`, `rfd` (native dialogs)
-- **Other:** `serde`/`serde_json`, `chrono`/`chronoutil`, `uuid` (session tokens), `log`, `thiserror`, `anyhow`
+- **Other:** `serde`/`serde_json`, `chrono`/`chronoutil`, `log`, `thiserror`, `anyhow`
 
 ---
 
@@ -144,7 +154,7 @@ finance-tauri/
 ├── src/                  # the reused React SPA (only src/api/ + logging.js changed)
 │   ├── api/              # TypeScript IPC layer: bindings.ts (generated) + finance.ts adapter + *.service.ts
 │   ├── logging.js        # forwards the WebView console to tauri-plugin-log
-│   ├── components/       # accounts, categories, transactions, transfers, scheduled, users
+│   ├── components/       # accounts, categories, transactions, transfers, scheduled
 │   ├── redux/  context/  utils/
 │   └── main.jsx
 └── src-tauri/            # the Rust/Tauri side
@@ -158,9 +168,9 @@ finance-tauri/
         ├── lib.rs        # Tauri setup + tauri-specta builder (invoke handler + bindings.ts export)
         ├── commands.rs   # the #[tauri::command] IPC surface, one fn per operation (specta-annotated)
         ├── bootstrap.rs  # init(): open SQLite pool + run the versioned migrations
-        ├── migrations/   # embedded, ordered SQL applied via a user_version ladder (0001_initial.sql, 0002_sessions.sql)
-        ├── config.rs state.rs error.rs models.rs service.rs
-        ├── db/           # SQLx query modules (users, accounts, categories, sessions, …)
+        ├── migrations/   # embedded, ordered SQL applied via a user_version ladder (0001_initial.sql)
+        ├── state.rs error.rs models.rs service.rs
+        ├── db/           # SQLx query modules (accounts, categories, transactions, transfers, scheduled)
         └── tests.rs      # in-crate integration test over the db/service/command layer
 ```
 
@@ -219,8 +229,8 @@ cargo test
 ```
 
 This exercises the full SQLite‑backed domain end‑to‑end through the `db`/`service`/command layer
-(register → authenticate → accounts → categories → transactions → balances → transfers → scheduled
-transaction → pay → foreign‑key cascade).
+(accounts → categories → transactions → balances → transfers → scheduled transaction → pay →
+foreign‑key cascade).
 
 ### Type‑check the IPC layer / regenerate bindings
 
@@ -250,8 +260,8 @@ signatures change, then commit it and run `npm run typecheck` to confirm the fro
 | App identifier | `com.luisgbm.finance` (from `tauri.conf.json`) |
 | Frontend ↔ Rust | Tauri IPC via the typed `tauri-specta` `commands` client — no network, no port |
 
-The database persists between runs and is created empty — register a user in the app on first launch.
-To reset, delete the `com.luisgbm.finance` folder.
+The database persists between runs and is created empty — the app opens straight to the accounts
+screen, ready to add an account. To reset, delete the `com.luisgbm.finance` folder.
 
 ---
 

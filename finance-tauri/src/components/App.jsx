@@ -14,9 +14,7 @@ import {createTheme, ThemeProvider} from '@mui/material/styles';
 import {LocalizationProvider} from '@mui/x-date-pickers/LocalizationProvider';
 import {AdapterMoment} from '@mui/x-date-pickers/AdapterMoment';
 import Settings from './Settings';
-import NewUser from './users/NewUser';
 import EditTransfer from "./transactions/EditTransfer";
-import Login from "./users/Login";
 import BottomNavBar from "./BottomNavBar";
 import ScheduledTransactionsList from "./scheduled-transactions/ScheduledTransactionsList";
 import NewScheduledTransaction from "./scheduled-transactions/NewScheduledTransaction";
@@ -28,6 +26,8 @@ import EditScheduledTransaction from "./scheduled-transactions/EditScheduledTran
 import PayScheduledTransaction from "./scheduled-transactions/PayScheduledTransaction";
 import EditScheduledTransfer from "./scheduled-transactions/EditScheduledTransfer";
 import PayScheduledTransfer from "./scheduled-transactions/PayScheduledTransfer";
+import {useDispatch} from "react-redux";
+import {initialDataService} from "../api/initial.data.service";
 
 const theme = createTheme({
     // Replicate the Material-UI v4 default theme so every component matches the original
@@ -74,6 +74,8 @@ const App = () => {
     const [messageModalTitle, setMessageModalTitle] = React.useState('');
     const [messageModalMessage, setMessageModalMessage] = React.useState('');
 
+    const dispatch = useDispatch();
+
     const toggleLoadingModalOpen = () => {
         setLoadingModalOpen(prevLoadingModalOpen => !prevLoadingModalOpen);
     };
@@ -87,6 +89,24 @@ const App = () => {
     const closeMessageModal = () => {
         setMessageModalOpen(false);
     };
+
+    // Single-user, no-auth desktop build: there is no login step to assemble the initial
+    // payload, so fetch it once on startup and hydrate the redux store directly.
+    React.useEffect(() => {
+        (async function loadInitialData() {
+            setLoadingModalOpen(true);
+            try {
+                const data = await initialDataService.getInitialData();
+                dispatch({type: 'setAccounts', payload: data.accounts});
+                dispatch({type: 'setCategories', payload: data.categories});
+                dispatch({type: 'setScheduledTransactions', payload: data.scheduled_transactions});
+            } catch (e) {
+                showMessageModal('Error', 'An error occurred while loading your data, please restart the app.');
+            } finally {
+                setLoadingModalOpen(false);
+            }
+        })();
+    }, []);  // eslint-disable-line react-hooks/exhaustive-deps
 
     return (
         <ThemeProvider theme={theme}>
@@ -105,9 +125,8 @@ const App = () => {
                         />
                         <Router>
                             <Routes>
-                                <Route path='/' element={<Login/>}/>
+                                <Route path='/' element={<AccountList/>}/>
                                 <Route path='/settings' element={<Settings/>}/>
-                                <Route path='/users/new' element={<NewUser/>}/>
                                 <Route path='/accounts' element={<AccountList/>}/>
                                 <Route path='/accounts/new' element={<NewAccount/>}/>
                                 <Route path='/accounts/edit/:id' element={<EditAccount/>}/>

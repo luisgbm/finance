@@ -5,7 +5,7 @@ use crate::models::{NewScheduledTransaction, ScheduledTransaction};
 
 const COLUMNS: &str = "id, kind, value, description, created_date, account_id, category_id, \
     origin_account_id, destination_account_id, repeat, repeat_freq, repeat_interval, \
-    infinite_repeat, end_after_repeats, current_repeat_count, next_date, user_id";
+    infinite_repeat, end_after_repeats, current_repeat_count, next_date";
 
 pub async fn insert(
     pool: &SqlitePool,
@@ -15,8 +15,8 @@ pub async fn insert(
         "INSERT INTO scheduled_transactions \
          (kind, value, description, created_date, account_id, category_id, origin_account_id, \
           destination_account_id, repeat, repeat_freq, repeat_interval, infinite_repeat, \
-          end_after_repeats, current_repeat_count, next_date, user_id) \
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \
+          end_after_repeats, current_repeat_count, next_date) \
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \
          RETURNING {COLUMNS}"
     ))
     .bind(new.kind)
@@ -34,36 +34,26 @@ pub async fn insert(
     .bind(new.end_after_repeats)
     .bind(new.current_repeat_count)
     .bind(new.next_date)
-    .bind(new.user_id)
     .fetch_one(pool)
     .await?;
 
     Ok(st)
 }
 
-pub async fn get_all(
-    pool: &SqlitePool,
-    user_id: i32,
-) -> Result<Vec<ScheduledTransaction>, AppError> {
+pub async fn get_all(pool: &SqlitePool) -> Result<Vec<ScheduledTransaction>, AppError> {
     let rows = sqlx::query_as::<_, ScheduledTransaction>(&format!(
-        "SELECT {COLUMNS} FROM scheduled_transactions WHERE user_id = ? ORDER BY created_date DESC"
+        "SELECT {COLUMNS} FROM scheduled_transactions ORDER BY created_date DESC"
     ))
-    .bind(user_id)
     .fetch_all(pool)
     .await?;
 
     Ok(rows)
 }
 
-pub async fn get(
-    pool: &SqlitePool,
-    id: i32,
-    user_id: i32,
-) -> Result<ScheduledTransaction, AppError> {
+pub async fn get(pool: &SqlitePool, id: i32) -> Result<ScheduledTransaction, AppError> {
     let st = sqlx::query_as::<_, ScheduledTransaction>(&format!(
-        "SELECT {COLUMNS} FROM scheduled_transactions WHERE user_id = ? AND id = ?"
+        "SELECT {COLUMNS} FROM scheduled_transactions WHERE id = ?"
     ))
-    .bind(user_id)
     .bind(id)
     .fetch_one(pool)
     .await?;
@@ -75,10 +65,9 @@ pub async fn update(
     pool: &SqlitePool,
     id: i32,
     new: &NewScheduledTransaction,
-    user_id: i32,
 ) -> Result<ScheduledTransaction, AppError> {
     let mut conn = pool.acquire().await?;
-    update_on(&mut conn, id, new, user_id).await
+    update_on(&mut conn, id, new).await
 }
 
 /// Update a scheduled transaction on the caller's connection/transaction, so paying a
@@ -87,7 +76,6 @@ pub async fn update_on(
     conn: &mut SqliteConnection,
     id: i32,
     new: &NewScheduledTransaction,
-    user_id: i32,
 ) -> Result<ScheduledTransaction, AppError> {
     let st = sqlx::query_as::<_, ScheduledTransaction>(&format!(
         "UPDATE scheduled_transactions SET \
@@ -95,7 +83,7 @@ pub async fn update_on(
             category_id = ?, origin_account_id = ?, destination_account_id = ?, repeat = ?, \
             repeat_freq = ?, repeat_interval = ?, infinite_repeat = ?, end_after_repeats = ?, \
             current_repeat_count = ?, next_date = ? \
-         WHERE user_id = ? AND id = ? RETURNING {COLUMNS}"
+         WHERE id = ? RETURNING {COLUMNS}"
     ))
     .bind(new.kind)
     .bind(new.value)
@@ -112,7 +100,6 @@ pub async fn update_on(
     .bind(new.end_after_repeats)
     .bind(new.current_repeat_count)
     .bind(new.next_date)
-    .bind(user_id)
     .bind(id)
     .fetch_one(&mut *conn)
     .await?;
@@ -120,13 +107,9 @@ pub async fn update_on(
     Ok(st)
 }
 
-pub async fn delete(
-    pool: &SqlitePool,
-    id: i32,
-    user_id: i32,
-) -> Result<ScheduledTransaction, AppError> {
+pub async fn delete(pool: &SqlitePool, id: i32) -> Result<ScheduledTransaction, AppError> {
     let mut conn = pool.acquire().await?;
-    delete_on(&mut conn, id, user_id).await
+    delete_on(&mut conn, id).await
 }
 
 /// Delete a scheduled transaction on the caller's connection/transaction, so paying a
@@ -134,12 +117,10 @@ pub async fn delete(
 pub async fn delete_on(
     conn: &mut SqliteConnection,
     id: i32,
-    user_id: i32,
 ) -> Result<ScheduledTransaction, AppError> {
     let st = sqlx::query_as::<_, ScheduledTransaction>(&format!(
-        "DELETE FROM scheduled_transactions WHERE user_id = ? AND id = ? RETURNING {COLUMNS}"
+        "DELETE FROM scheduled_transactions WHERE id = ? RETURNING {COLUMNS}"
     ))
-    .bind(user_id)
     .bind(id)
     .fetch_one(&mut *conn)
     .await?;

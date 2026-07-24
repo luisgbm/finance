@@ -1,15 +1,13 @@
-import { commands, call, requireToken } from './finance';
+import { commands, call } from './finance';
 import type { ScheduledTransactionKinds, RepeatFrequencies } from './bindings';
 
 const getAllScheduledTransactions = async () => {
-    const { data } = await call(commands.getScheduledTransactions(requireToken()));
+    const { data } = await call(commands.getScheduledTransactions());
     return data;
 };
 
 const getScheduledTransactionById = async (scheduledTransactionId: number) => {
-    const { data } = await call(
-        commands.getScheduledTransaction(requireToken(), scheduledTransactionId),
-    );
+    const { data } = await call(commands.getScheduledTransaction(scheduledTransactionId));
     return data;
 };
 
@@ -29,7 +27,7 @@ const newScheduledTransaction = async (
     endAfterRepeats: number | null,
 ) => {
     const { data } = await call(
-        commands.createScheduledTransaction(requireToken(), {
+        commands.createScheduledTransaction({
             kind,
             account_id: accountId,
             value,
@@ -64,7 +62,7 @@ const payScheduledTransaction = async (
     destinationAccountId: number | null,
 ) => {
     const { data } = await call(
-        commands.payScheduledTransaction(requireToken(), scheduledTransactionId, {
+        commands.payScheduledTransaction(scheduledTransactionId, {
             value,
             description,
             date,
@@ -95,7 +93,7 @@ const editScheduledTransactionById = async (
     endAfterRepeats: number | null,
 ) => {
     const { data } = await call(
-        commands.updateScheduledTransaction(requireToken(), scheduledTransactionId, {
+        commands.updateScheduledTransaction(scheduledTransactionId, {
             kind,
             account_id: accountId,
             value,
@@ -118,9 +116,7 @@ const editScheduledTransactionById = async (
 };
 
 const deleteScheduledTransactionById = async (transactionId: number) => {
-    const { data } = await call(
-        commands.deleteScheduledTransaction(requireToken(), transactionId),
-    );
+    const { data } = await call(commands.deleteScheduledTransaction(transactionId));
     return data;
 };
 

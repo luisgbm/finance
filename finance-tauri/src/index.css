@@ -7,7 +7,10 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-.root {
+/* Reserve space for the fixed 56px-tall BottomNavigation so page content
+   (the last row / save buttons) isn't hidden behind it when scrolled to the
+   bottom. Targets the #root mount node since every route renders inside it. */
+#root {
   padding-bottom: 56px;
 }
 

@@ -21,6 +21,9 @@ import CashflowAccounts from './reports/CashflowAccounts';
 import CompareExpenses from './reports/CompareExpenses';
 import CompareExpensesResult from './reports/CompareExpensesResult';
 import CompareExpensesCategories from './reports/CompareExpensesCategories';
+import CompareIncome from './reports/CompareIncome';
+import CompareIncomeResult from './reports/CompareIncomeResult';
+import CompareIncomeCategories from './reports/CompareIncomeCategories';
 import NewUser from './users/NewUser';
 import EditTransfer from "./transactions/EditTransfer";
 import Login from "./users/Login";
@@ -121,6 +124,9 @@ const App = () => {
                                 <Route path='/reports/compare-expenses' element={<CompareExpenses/>}/>
                                 <Route path='/reports/compare-expenses/chart' element={<CompareExpensesResult/>}/>
                                 <Route path='/reports/compare-expenses/categories' element={<CompareExpensesCategories/>}/>
+                                <Route path='/reports/compare-income' element={<CompareIncome/>}/>
+                                <Route path='/reports/compare-income/chart' element={<CompareIncomeResult/>}/>
+                                <Route path='/reports/compare-income/categories' element={<CompareIncomeCategories/>}/>
                                 <Route path='/users/new' element={<NewUser/>}/>
                                 <Route path='/accounts' element={<AccountList/>}/>
                                 <Route path='/accounts/new' element={<NewAccount/>}/>

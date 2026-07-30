@@ -5,6 +5,7 @@ import Typography from '@mui/material/Typography';
 import {Card, Container, List, ListItemButton, ListItemIcon, ListItemText} from '@mui/material';
 import ShowChartIcon from '@mui/icons-material/ShowChart';
 import PieChartIcon from '@mui/icons-material/PieChart';
+import PieChartOutlineIcon from '@mui/icons-material/PieChartOutlined';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import {Link} from 'react-router-dom';
 
@@ -31,6 +32,13 @@ const ReportsList = () => {
                                 <PieChartIcon/>
                             </ListItemIcon>
                             <ListItemText primary='Compare Expense Categories'/>
+                            <ChevronRightIcon color='action'/>
+                        </ListItemButton>
+                        <ListItemButton component={Link} to='/reports/compare-income'>
+                            <ListItemIcon>
+                                <PieChartOutlineIcon/>
+                            </ListItemIcon>
+                            <ListItemText primary='Compare Income Categories'/>
                             <ChevronRightIcon color='action'/>
                         </ListItemButton>
                     </List>

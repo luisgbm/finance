@@ -113,7 +113,7 @@ const STEP_UNIT = {Days: 'day', Weeks: 'week', Months: 'month', Quarters: 'quart
 const START_UNIT = {Days: 'day', Weeks: 'isoWeek', Months: 'month', Quarters: 'quarter', Years: 'year'};
 
 // The bucket a given date falls into: a stable `key` (for grouping) and a human `label`.
-function bucketOf(d, breakdown) {
+export function bucketOf(d, breakdown) {
     switch (breakdown) {
         case 'Days':
             return {key: d.format('YYYY-MM-DD'), label: d.format('DD/MM/YYYY')};
@@ -134,7 +134,7 @@ function bucketOf(d, breakdown) {
 
 // Ordered list of every bucket between start and end (inclusive) so the chart shows a
 // continuous axis with zero-valued gaps.
-function generateBuckets(start, end, breakdown) {
+export function generateBuckets(start, end, breakdown) {
     const startUnit = START_UNIT[breakdown] || 'month';
     const stepUnit = STEP_UNIT[breakdown] || 'month';
     const buckets = [];

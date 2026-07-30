@@ -24,6 +24,12 @@ import CompareExpensesCategories from './reports/CompareExpensesCategories';
 import CompareIncome from './reports/CompareIncome';
 import CompareIncomeResult from './reports/CompareIncomeResult';
 import CompareIncomeCategories from './reports/CompareIncomeCategories';
+import ExpenseCategoryOverTime from './reports/ExpenseCategoryOverTime';
+import ExpenseCategoryOverTimeResult from './reports/ExpenseCategoryOverTimeResult';
+import ExpenseCategoryOverTimeCategories from './reports/ExpenseCategoryOverTimeCategories';
+import IncomeCategoryOverTime from './reports/IncomeCategoryOverTime';
+import IncomeCategoryOverTimeResult from './reports/IncomeCategoryOverTimeResult';
+import IncomeCategoryOverTimeCategories from './reports/IncomeCategoryOverTimeCategories';
 import NewUser from './users/NewUser';
 import EditTransfer from "./transactions/EditTransfer";
 import Login from "./users/Login";
@@ -127,6 +133,12 @@ const App = () => {
                                 <Route path='/reports/compare-income' element={<CompareIncome/>}/>
                                 <Route path='/reports/compare-income/chart' element={<CompareIncomeResult/>}/>
                                 <Route path='/reports/compare-income/categories' element={<CompareIncomeCategories/>}/>
+                                <Route path='/reports/expense-category-over-time' element={<ExpenseCategoryOverTime/>}/>
+                                <Route path='/reports/expense-category-over-time/chart' element={<ExpenseCategoryOverTimeResult/>}/>
+                                <Route path='/reports/expense-category-over-time/categories' element={<ExpenseCategoryOverTimeCategories/>}/>
+                                <Route path='/reports/income-category-over-time' element={<IncomeCategoryOverTime/>}/>
+                                <Route path='/reports/income-category-over-time/chart' element={<IncomeCategoryOverTimeResult/>}/>
+                                <Route path='/reports/income-category-over-time/categories' element={<IncomeCategoryOverTimeCategories/>}/>
                                 <Route path='/users/new' element={<NewUser/>}/>
                                 <Route path='/accounts' element={<AccountList/>}/>
                                 <Route path='/accounts/new' element={<NewAccount/>}/>

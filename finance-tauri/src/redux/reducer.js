@@ -5,6 +5,8 @@ import {scheduledTransactionsReducer} from './scheduledTransactionsSlice';
 import {cashflowReportReducer} from './cashflowReportSlice';
 import {compareExpensesReportReducer} from './compareExpensesReportSlice';
 import {compareIncomeReportReducer} from './compareIncomeReportSlice';
+import {expenseCategoryOverTimeReportReducer} from './expenseCategoryOverTimeReportSlice';
+import {incomeCategoryOverTimeReportReducer} from './incomeCategoryOverTimeReportSlice';
 
 const rootReducer = combineReducers({
     accounts: accountsReducer,
@@ -12,7 +14,9 @@ const rootReducer = combineReducers({
     scheduledTransactions: scheduledTransactionsReducer,
     cashflowReport: cashflowReportReducer,
     compareExpensesReport: compareExpensesReportReducer,
-    compareIncomeReport: compareIncomeReportReducer
+    compareIncomeReport: compareIncomeReportReducer,
+    expenseCategoryOverTimeReport: expenseCategoryOverTimeReportReducer,
+    incomeCategoryOverTimeReport: incomeCategoryOverTimeReportReducer
 })
 
 export default rootReducer

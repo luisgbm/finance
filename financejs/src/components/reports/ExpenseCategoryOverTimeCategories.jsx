@@ -1,0 +1,96 @@
+import React from 'react';
+import {useNavigate} from 'react-router-dom';
+import AppBar from '@mui/material/AppBar';
+import Toolbar from '@mui/material/Toolbar';
+import Typography from '@mui/material/Typography';
+import {
+    Button,
+    Card,
+    Checkbox,
+    Container,
+    IconButton,
+    List,
+    ListItemButton,
+    ListItemIcon,
+    ListItemText,
+    Stack,
+} from '@mui/material';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import {useDispatch, useSelector} from 'react-redux';
+
+const ExpenseCategoryOverTimeCategories = () => {
+    const navigate = useNavigate();
+    const dispatch = useDispatch();
+
+    const categories = useSelector(state => state.categories);
+    const selectedCategoryIds = useSelector(state => state.expenseCategoryOverTimeReport.selectedCategoryIds);
+
+    // This report only ever charts expense categories, so income categories are not listed.
+    const expenseCategories = [...categories]
+        .filter(c => c.categorytype === 'Expense')
+        .sort((a, b) => a.name.localeCompare(b.name));
+    const allIds = expenseCategories.map(c => c.id);
+
+    // null means "All categories" — render that as every box checked.
+    const selectedSet = new Set(selectedCategoryIds === null ? allIds : selectedCategoryIds);
+
+    const isChecked = (id) => selectedSet.has(id);
+
+    const toggle = (id) => {
+        const next = new Set(selectedSet);
+        if (next.has(id)) {
+            next.delete(id);
+        } else {
+            next.add(id);
+        }
+        dispatch({type: 'setExpenseCategoryOverTimeCategories', payload: allIds.filter(x => next.has(x))});
+    };
+
+    const selectAll = () => {
+        dispatch({type: 'setExpenseCategoryOverTimeCategories', payload: [...allIds]});
+    };
+
+    const deselectAll = () => {
+        dispatch({type: 'setExpenseCategoryOverTimeCategories', payload: []});
+    };
+
+    return (
+        <>
+            <AppBar position='sticky'>
+                <Toolbar>
+                    <IconButton color='inherit' edge='start' onClick={() => navigate('/reports/expense-category-over-time')}>
+                        <ArrowBackIcon/>
+                    </IconButton>
+                    <Typography variant='h6' sx={{flexGrow: 1}}>Select Categories</Typography>
+                </Toolbar>
+            </AppBar>
+            <Container maxWidth='sm' sx={{p: 3}}>
+                <Stack direction='row' spacing={2} sx={{mb: 2}}>
+                    <Button variant='outlined' fullWidth onClick={selectAll}>Select all</Button>
+                    <Button variant='outlined' fullWidth onClick={deselectAll}>Deselect all</Button>
+                </Stack>
+                <Card variant='outlined'>
+                    <List disablePadding>
+                        {
+                            expenseCategories.map(category =>
+                                <ListItemButton key={category.id} onClick={() => toggle(category.id)}>
+                                    <ListItemIcon>
+                                        <Checkbox
+                                            edge='start'
+                                            checked={isChecked(category.id)}
+                                            tabIndex={-1}
+                                            disableRipple
+                                        />
+                                    </ListItemIcon>
+                                    <ListItemText primary={category.name}/>
+                                </ListItemButton>
+                            )
+                        }
+                    </List>
+                </Card>
+            </Container>
+        </>
+    );
+};
+
+export default ExpenseCategoryOverTimeCategories;

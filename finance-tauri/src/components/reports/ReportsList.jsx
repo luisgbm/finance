@@ -6,6 +6,8 @@ import {Card, Container, List, ListItemButton, ListItemIcon, ListItemText} from 
 import ShowChartIcon from '@mui/icons-material/ShowChart';
 import PieChartIcon from '@mui/icons-material/PieChart';
 import PieChartOutlineIcon from '@mui/icons-material/PieChartOutlined';
+import InsertChartIcon from '@mui/icons-material/InsertChart';
+import InsertChartOutlinedIcon from '@mui/icons-material/InsertChartOutlined';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import {Link} from 'react-router-dom';
 
@@ -39,6 +41,20 @@ const ReportsList = () => {
                                 <PieChartOutlineIcon/>
                             </ListItemIcon>
                             <ListItemText primary='Compare Income Categories'/>
+                            <ChevronRightIcon color='action'/>
+                        </ListItemButton>
+                        <ListItemButton component={Link} to='/reports/expense-category-over-time'>
+                            <ListItemIcon>
+                                <InsertChartIcon/>
+                            </ListItemIcon>
+                            <ListItemText primary='Expense Category Over Time'/>
+                            <ChevronRightIcon color='action'/>
+                        </ListItemButton>
+                        <ListItemButton component={Link} to='/reports/income-category-over-time'>
+                            <ListItemIcon>
+                                <InsertChartOutlinedIcon/>
+                            </ListItemIcon>
+                            <ListItemText primary='Income Category Over Time'/>
                             <ChevronRightIcon color='action'/>
                         </ListItemButton>
                     </List>

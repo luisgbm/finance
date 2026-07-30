@@ -30,6 +30,9 @@ import ExpenseCategoryOverTimeCategories from './reports/ExpenseCategoryOverTime
 import IncomeCategoryOverTime from './reports/IncomeCategoryOverTime';
 import IncomeCategoryOverTimeResult from './reports/IncomeCategoryOverTimeResult';
 import IncomeCategoryOverTimeCategories from './reports/IncomeCategoryOverTimeCategories';
+import Statistics from './reports/Statistics';
+import StatisticsResult from './reports/StatisticsResult';
+import StatisticsAccounts from './reports/StatisticsAccounts';
 import EditTransfer from "./transactions/EditTransfer";
 import BottomNavBar from "./BottomNavBar";
 import ScheduledTransactionsList from "./scheduled-transactions/ScheduledTransactionsList";
@@ -159,6 +162,9 @@ const App = () => {
                                 <Route path='/reports/income-category-over-time' element={<IncomeCategoryOverTime/>}/>
                                 <Route path='/reports/income-category-over-time/chart' element={<IncomeCategoryOverTimeResult/>}/>
                                 <Route path='/reports/income-category-over-time/categories' element={<IncomeCategoryOverTimeCategories/>}/>
+                                <Route path='/reports/statistics' element={<Statistics/>}/>
+                                <Route path='/reports/statistics/result' element={<StatisticsResult/>}/>
+                                <Route path='/reports/statistics/accounts' element={<StatisticsAccounts/>}/>
                                 <Route path='/accounts' element={<AccountList/>}/>
                                 <Route path='/accounts/new' element={<NewAccount/>}/>
                                 <Route path='/accounts/edit/:id' element={<EditAccount/>}/>

@@ -8,6 +8,7 @@ import PieChartIcon from '@mui/icons-material/PieChart';
 import PieChartOutlineIcon from '@mui/icons-material/PieChartOutlined';
 import InsertChartIcon from '@mui/icons-material/InsertChart';
 import InsertChartOutlinedIcon from '@mui/icons-material/InsertChartOutlined';
+import AssessmentIcon from '@mui/icons-material/Assessment';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import {Link} from 'react-router-dom';
 
@@ -55,6 +56,13 @@ const ReportsList = () => {
                                 <InsertChartOutlinedIcon/>
                             </ListItemIcon>
                             <ListItemText primary='Income Category Over Time'/>
+                            <ChevronRightIcon color='action'/>
+                        </ListItemButton>
+                        <ListItemButton component={Link} to='/reports/statistics'>
+                            <ListItemIcon>
+                                <AssessmentIcon/>
+                            </ListItemIcon>
+                            <ListItemText primary='Statistics'/>
                             <ChevronRightIcon color='action'/>
                         </ListItemButton>
                     </List>

@@ -4,6 +4,7 @@ import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 import {Card, Container, List, ListItemButton, ListItemIcon, ListItemText} from '@mui/material';
 import ShowChartIcon from '@mui/icons-material/ShowChart';
+import PieChartIcon from '@mui/icons-material/PieChart';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import {Link} from 'react-router-dom';
 
@@ -23,6 +24,13 @@ const ReportsList = () => {
                                 <ShowChartIcon/>
                             </ListItemIcon>
                             <ListItemText primary='Cashflow'/>
+                            <ChevronRightIcon color='action'/>
+                        </ListItemButton>
+                        <ListItemButton component={Link} to='/reports/compare-expenses'>
+                            <ListItemIcon>
+                                <PieChartIcon/>
+                            </ListItemIcon>
+                            <ListItemText primary='Compare Expense Categories'/>
                             <ChevronRightIcon color='action'/>
                         </ListItemButton>
                     </List>

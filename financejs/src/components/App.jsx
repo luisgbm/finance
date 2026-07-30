@@ -18,6 +18,9 @@ import ReportsList from './reports/ReportsList';
 import Cashflow from './reports/Cashflow';
 import CashflowResult from './reports/CashflowResult';
 import CashflowAccounts from './reports/CashflowAccounts';
+import CompareExpenses from './reports/CompareExpenses';
+import CompareExpensesResult from './reports/CompareExpensesResult';
+import CompareExpensesCategories from './reports/CompareExpensesCategories';
 import NewUser from './users/NewUser';
 import EditTransfer from "./transactions/EditTransfer";
 import Login from "./users/Login";
@@ -115,6 +118,9 @@ const App = () => {
                                 <Route path='/reports/cashflow' element={<Cashflow/>}/>
                                 <Route path='/reports/cashflow/chart' element={<CashflowResult/>}/>
                                 <Route path='/reports/cashflow/accounts' element={<CashflowAccounts/>}/>
+                                <Route path='/reports/compare-expenses' element={<CompareExpenses/>}/>
+                                <Route path='/reports/compare-expenses/chart' element={<CompareExpensesResult/>}/>
+                                <Route path='/reports/compare-expenses/categories' element={<CompareExpensesCategories/>}/>
                                 <Route path='/users/new' element={<NewUser/>}/>
                                 <Route path='/accounts' element={<AccountList/>}/>
                                 <Route path='/accounts/new' element={<NewAccount/>}/>

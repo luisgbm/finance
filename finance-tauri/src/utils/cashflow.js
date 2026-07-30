@@ -198,7 +198,7 @@ const REPEAT_UNIT = {Days: 'days', Weeks: 'weeks', Months: 'months', Years: 'yea
 // Expand one scheduled transaction into the individual future occurrence dates that fall
 // within [rangeStart, rangeEnd]. Honours non-repeating, finite-repeat (bounded by
 // end_after_repeats minus current_repeat_count) and infinite-repeat schedules.
-function projectOccurrences(st, rangeStart, rangeEnd) {
+export function projectOccurrences(st, rangeStart, rangeEnd) {
     const occurrences = [];
     const first = parseTxDate(st.next_date);
     if (!first.isValid()) return occurrences;

@@ -3,9 +3,9 @@ import {Link, useLocation} from "react-router-dom";
 import BottomNavigation from "@mui/material/BottomNavigation";
 import BottomNavigationAction from "@mui/material/BottomNavigationAction";
 import HomeIcon from "@mui/icons-material/Home";
-import ImportExportIcon from "@mui/icons-material/ImportExport";
 import SettingsIcon from "@mui/icons-material/Settings";
 import EventIcon from "@mui/icons-material/Event";
+import AssessmentIcon from "@mui/icons-material/Assessment";
 import {Badge} from "@mui/material";
 import {dueScheduledTransactions} from "./scheduled-transactions/due.scheduled.transactions";
 import {useSelector} from "react-redux";
@@ -20,10 +20,10 @@ const BottomNavBar = () => {
     const dueBadgeCount = dueScheduledTransactions(allScheduledTransactions);
 
     React.useEffect(() => {
-        if (location.pathname.startsWith('/categories')) {
-            setValue('categories');
-        } else if (location.pathname.startsWith('/settings')) {
+        if (location.pathname.startsWith('/settings') || location.pathname.startsWith('/categories')) {
             setValue('settings');
+        } else if (location.pathname.startsWith('/reports')) {
+            setValue('reports');
         } else if (location.pathname.startsWith('/accounts')) {
             setValue('home');
         } else if (location.pathname.startsWith('/transactions')) {
@@ -65,11 +65,11 @@ const BottomNavBar = () => {
                 value={'scheduled-transactions'}
             />
             <BottomNavigationAction
-                label='Categories'
-                icon={<ImportExportIcon/>}
+                label='Reports'
+                icon={<AssessmentIcon/>}
                 component={Link}
-                to={'/categories'}
-                value={'categories'}
+                to={'/reports'}
+                value={'reports'}
             />
             <BottomNavigationAction
                 label='Settings'

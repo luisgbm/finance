@@ -14,6 +14,10 @@ import {createTheme, ThemeProvider} from '@mui/material/styles';
 import {LocalizationProvider} from '@mui/x-date-pickers/LocalizationProvider';
 import {AdapterMoment} from '@mui/x-date-pickers/AdapterMoment';
 import Settings from './Settings';
+import ReportsList from './reports/ReportsList';
+import Cashflow from './reports/Cashflow';
+import CashflowResult from './reports/CashflowResult';
+import CashflowAccounts from './reports/CashflowAccounts';
 import NewUser from './users/NewUser';
 import EditTransfer from "./transactions/EditTransfer";
 import Login from "./users/Login";
@@ -107,6 +111,10 @@ const App = () => {
                             <Routes>
                                 <Route path='/' element={<Login/>}/>
                                 <Route path='/settings' element={<Settings/>}/>
+                                <Route path='/reports' element={<ReportsList/>}/>
+                                <Route path='/reports/cashflow' element={<Cashflow/>}/>
+                                <Route path='/reports/cashflow/chart' element={<CashflowResult/>}/>
+                                <Route path='/reports/cashflow/accounts' element={<CashflowAccounts/>}/>
                                 <Route path='/users/new' element={<NewUser/>}/>
                                 <Route path='/accounts' element={<AccountList/>}/>
                                 <Route path='/accounts/new' element={<NewAccount/>}/>

@@ -6,6 +6,7 @@ import HomeIcon from "@mui/icons-material/Home";
 import ImportExportIcon from "@mui/icons-material/ImportExport";
 import SettingsIcon from "@mui/icons-material/Settings";
 import EventIcon from "@mui/icons-material/Event";
+import AssessmentIcon from "@mui/icons-material/Assessment";
 import {Badge} from "@mui/material";
 import {dueScheduledTransactions} from "./scheduled-transactions/due.scheduled.transactions";
 import {useSelector} from "react-redux";
@@ -31,6 +32,8 @@ const BottomNavBar = () => {
 
         if (location.pathname.startsWith('/categories')) {
             setValue('categories');
+        } else if (location.pathname.startsWith('/reports')) {
+            setValue('reports');
         } else if (location.pathname.startsWith('/settings')) {
             setValue('settings');
         } else if (location.pathname.startsWith('/accounts')) {
@@ -78,6 +81,13 @@ const BottomNavBar = () => {
                     component={Link}
                     to={'/categories'}
                     value={'categories'}
+                />
+                <BottomNavigationAction
+                    label='Reports'
+                    icon={<AssessmentIcon/>}
+                    component={Link}
+                    to={'/reports'}
+                    value={'reports'}
                 />
                 <BottomNavigationAction
                     label='Settings'
